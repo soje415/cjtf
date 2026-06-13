@@ -1,0 +1,50 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import { createServiceClient } from '@/lib/supabase/server'
+
+export async function POST(req: NextRequest) {
+  const formData = await req.formData()
+  const email = formData.get('email') as string
+  const password = formData.get('password') as string
+
+  const origin = req.nextUrl.origin
+  const cookieJar: { name: string; value: string; options: Record<string, unknown> }[] = []
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => req.cookies.getAll(),
+        setAll: (cookies) => { cookieJar.push(...cookies) },
+      },
+    }
+  )
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+
+  if (error) {
+    return NextResponse.redirect(
+      `${origin}/auth/login?error=${encodeURIComponent(error.message)}`,
+      { status: 303 }
+    )
+  }
+
+  // Use service role to bypass RLS recursion on profiles table
+  const service = createServiceClient()
+  const { data: profile } = await service
+    .from('profiles')
+    .select('role')
+    .eq('id', data.user.id)
+    .single()
+
+  const role = profile?.role ?? 'applicant'
+
+  const res = NextResponse.redirect(`${origin}/portal/${role}/dashboard`, { status: 303 })
+  cookieJar.forEach(({ name, value, options }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    res.cookies.set(name, value, options as any)
+  })
+
+  return res
+}
