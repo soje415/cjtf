@@ -30,6 +30,31 @@ export async function captureElementAsPdf(element: HTMLElement): Promise<Blob> {
   return pdf.output('blob')
 }
 
+// A4 landscape: 297 mm × 210 mm
+const A4_W_MM = 297
+const A4_H_MM = 210
+
+/** Capture an element as a full A4-landscape PDF (used for the Operational Permit). */
+export async function captureElementAsA4Pdf(element: HTMLElement): Promise<Blob> {
+  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+    import('html2canvas'),
+    import('jspdf'),
+  ])
+
+  const canvas = await html2canvas(element, {
+    scale: 2,
+    useCORS: true,
+    allowTaint: false,
+    backgroundColor: '#ffffff',
+    logging: false,
+  })
+
+  const imgData = canvas.toDataURL('image/png')
+  const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+  pdf.addImage(imgData, 'PNG', 0, 0, A4_W_MM, A4_H_MM)
+  return pdf.output('blob')
+}
+
 /** Fetch a remote image as a base64 data URL so html2canvas can render it. */
 export async function toDataUrl(url: string): Promise<string> {
   const res = await fetch(url)
