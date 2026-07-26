@@ -78,5 +78,5 @@ export async function registerAction(formData: FormData) {
   }
 
   revalidatePath('/', 'layout')
-  redirect('/portal/applicant/dashboard')
+  redirect('/portal/applicant/verify-phone')
 }

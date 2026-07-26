@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const res = NextResponse.redirect(`${origin}/portal/applicant/dashboard`, { status: 303 })
+  const res = NextResponse.redirect(`${origin}/portal/applicant/verify-phone`, { status: 303 })
   cookieJar.forEach(({ name, value, options }) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     res.cookies.set(name, value, options as any)
