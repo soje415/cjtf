@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { sendSms } from '@/lib/termii'
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -27,6 +28,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   await service.from('applications').update({
     status: 'REJECTED',
+    rejected_by_role: profile?.role,
+    rejected_at: new Date().toISOString(),
+    rejection_reason: note.trim(),
     updated_at: new Date().toISOString(),
   }).eq('id', params.id)
 
@@ -36,6 +40,20 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     note: note.trim(),
     action: profile?.role === 'int' ? 'int_rejected' : 'admin_rejected',
   })
+
+  // Notify the applicant of the decision
+  const { data: appInfo } = await service
+    .from('applications')
+    .select('first_name, last_name, phone_number')
+    .eq('id', params.id)
+    .single()
+
+  if (appInfo?.phone_number) {
+    await sendSms(
+      appInfo.phone_number,
+      `CJTF Portal: We're sorry, ${appInfo.first_name} ${appInfo.last_name}. Your application was not successful. Reason: ${note.trim()}`
+    ).catch(() => {})
+  }
 
   return NextResponse.json({ ok: true })
 }

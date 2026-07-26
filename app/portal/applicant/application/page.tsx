@@ -9,25 +9,19 @@ export default async function ApplicationPage() {
   const user = session?.user
   if (!user) redirect('/auth/login')
 
-  // If a non-draft application already exists, send to dashboard
-  const { data: submittedApp } = await service
-    .from('applications')
-    .select('status')
-    .eq('applicant_id', user.id)
-    .not('status', 'eq', 'DRAFT')
-    .limit(1)
-    .maybeSingle()
-
-  if (submittedApp) redirect('/portal/applicant/dashboard')
-
-  const { data: app } = await service
+  const { data: latest } = await service
     .from('applications')
     .select('*')
     .eq('applicant_id', user.id)
-    .eq('status', 'DRAFT')
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
 
-  return <ApplicationForm existingApplication={app} userId={user.id} />
+  // The form is editable only while DRAFT, or after a rejection (to correct
+  // and resubmit). Anything mid-review or completed goes to the dashboard.
+  if (latest && latest.status !== 'DRAFT' && latest.status !== 'REJECTED') {
+    redirect('/portal/applicant/dashboard')
+  }
+
+  return <ApplicationForm existingApplication={latest} userId={user.id} />
 }

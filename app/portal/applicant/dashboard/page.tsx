@@ -1,4 +1,5 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { LinkButton } from '@/components/ui/link-button'
@@ -9,9 +10,12 @@ const STEPS: { status: ApplicationStatus; label: string }[] = [
   { status: 'PENDING_ICT_VERIFICATION', label: 'ICT Verification' },
   { status: 'PENDING_INT_SCREENING', label: 'Intelligence Screening' },
   { status: 'PENDING_ADMIN_APPROVAL', label: 'Admin Approval' },
+  { status: 'PENDING_TRAINING', label: 'Training' },
   { status: 'APPROVED_GENERATING_ID', label: 'ID Generation' },
   { status: 'COMPLETED', label: 'Completed' },
 ]
+
+const REJECTER_LABEL: Record<string, string> = { int: 'Intelligence', admin: 'Command' }
 
 const STATUS_ORDER = STEPS.map((s) => s.status)
 
@@ -34,6 +38,13 @@ export default async function ApplicantDashboard() {
     .limit(1)
     .maybeSingle()
 
+  const { data: profile } = await service
+    .from('profiles')
+    .select('phone_verified')
+    .eq('id', userId)
+    .maybeSingle()
+
+  const phoneVerified = profile?.phone_verified ?? false
   const currentStep = app ? getStepIndex(app.status as ApplicationStatus) : 0
   const isRejected = app?.status === 'REJECTED'
   const isCompleted = app?.status === 'COMPLETED'
@@ -44,6 +55,21 @@ export default async function ApplicantDashboard() {
         <h1 className="text-2xl font-bold text-gray-800">My Application</h1>
         <p className="text-gray-500 text-sm mt-1">Track your CJTF recruitment application status</p>
       </div>
+
+      {!phoneVerified && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Verify your phone number</p>
+            <p className="text-xs text-amber-700">You must verify your phone before you can submit your application.</p>
+          </div>
+          <Link
+            href="/portal/applicant/verify-phone"
+            className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold px-4 py-1.5 rounded"
+          >
+            Verify now
+          </Link>
+        </div>
+      )}
 
       {app ? (
         <Card className={isRejected ? 'border-red-300' : isCompleted ? 'border-cjtf-green' : ''}>
@@ -60,7 +86,20 @@ export default async function ApplicantDashboard() {
           </CardHeader>
           <CardContent>
             {isRejected ? (
-              <p className="text-red-600 text-sm">Your application was not approved. Please contact the CJTF office for more information.</p>
+              <div className="space-y-3">
+                <div className="rounded-lg bg-red-50 border border-red-200 p-3">
+                  <p className="text-sm font-semibold text-red-800">
+                    Application rejected{app.rejected_by_role ? ` by ${REJECTER_LABEL[app.rejected_by_role] ?? app.rejected_by_role}` : ''}
+                  </p>
+                  {app.rejection_reason && (
+                    <p className="text-sm text-red-700 mt-1"><span className="font-medium">Reason:</span> {app.rejection_reason}</p>
+                  )}
+                </div>
+                <p className="text-sm text-gray-600">Correct the issue above, then resubmit your application for re-review.</p>
+                <LinkButton href="/portal/applicant/application" className="bg-cjtf-gold text-cjtf-green hover:bg-cjtf-gold-dark">
+                  Correct &amp; Resubmit
+                </LinkButton>
+              </div>
             ) : (
               <div className="space-y-2 mt-2">
                 {STEPS.map((step, i) => (
