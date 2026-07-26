@@ -62,7 +62,7 @@ const OperationalPermit = forwardRef<HTMLDivElement, PermitProps>(function Opera
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '6px 30px 0' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/cjtf-logo.jpg" alt="CJTF" crossOrigin="anonymous"
+          <img src="/coat-of-arms.jpeg" alt="Federal Republic of Nigeria" crossOrigin="anonymous"
             style={{ width: 86, height: 86, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${GOLD}` }} />
           <div style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ fontSize: 42, fontWeight: 800, letterSpacing: 1, color: NAVY }}>CIVILIAN JOINT TASK FORCE</div>
