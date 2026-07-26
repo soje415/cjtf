@@ -18,12 +18,19 @@ interface Props {
   onBack: () => void
 }
 
-type DocField = 'passport_photo_url' | 'id_document_url' | 'birth_cert_url'
+type DocField =
+  | 'passport_photo_url'
+  | 'id_document_url'
+  | 'birth_cert_url'
+  | 'guarantor_form_url'
+  | 'age_declaration_url'
 
-const DOCS: { field: DocField; label: string; accept: string }[] = [
-  { field: 'passport_photo_url', label: 'Passport Photograph *', accept: 'image/*' },
+const DOCS: { field: DocField; label: string; accept: string; required?: boolean }[] = [
+  { field: 'passport_photo_url', label: 'Passport Photograph', accept: 'image/*', required: true },
   { field: 'id_document_url', label: 'National ID / Voter Card / NIN Slip', accept: 'image/*,.pdf' },
-  { field: 'birth_cert_url', label: 'Birth Certificate / Declaration of Age', accept: 'image/*,.pdf' },
+  { field: 'birth_cert_url', label: 'Birth Certificate', accept: 'image/*,.pdf' },
+  { field: 'age_declaration_url', label: 'Declaration of Age', accept: 'image/*,.pdf', required: true },
+  { field: 'guarantor_form_url', label: 'Signed Guarantor Form', accept: 'image/*,.pdf', required: true },
 ]
 
 export default function Step4Documents({ form, update, saveProgress, saving, appId, onNext, onBack }: Props) {
@@ -41,7 +48,6 @@ export default function Step4Documents({ form, update, saveProgress, saving, app
     setUploading(field)
 
     try {
-      // Get a signed upload URL from the server (uses service role, bypasses RLS)
       const res = await fetch('/api/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -54,7 +60,6 @@ export default function Step4Documents({ form, update, saveProgress, saving, app
         return
       }
 
-      // Upload directly to Supabase Storage using the signed URL
       const uploadRes = await fetch(json.signedUrl, {
         method: 'PUT',
         headers: { 'Content-Type': file.type },
@@ -81,13 +86,15 @@ export default function Step4Documents({ form, update, saveProgress, saving, app
     onNext()
   }
 
+  const requiredDone = DOCS.filter((d) => d.required).every((d) => form[d.field])
+
   return (
     <Card>
       <CardContent className="p-6 space-y-5">
-        <p className="text-sm text-gray-500">Upload clear photos or scanned copies of your documents. Passport photo is required.</p>
-        {DOCS.map(({ field, label, accept }) => (
+        <p className="text-sm text-gray-500">Upload clear photos or scanned copies. Items marked * are required.</p>
+        {DOCS.map(({ field, label, accept, required }) => (
           <div key={field} className="space-y-1">
-            <Label>{label}</Label>
+            <Label>{label}{required ? ' *' : ' (optional)'}</Label>
             <div className="flex items-center gap-3">
               <input
                 type="file"
@@ -107,7 +114,7 @@ export default function Step4Documents({ form, update, saveProgress, saving, app
           <Button variant="outline" onClick={onBack}>← Back</Button>
           <Button
             onClick={handleNext}
-            disabled={!form.passport_photo_url || !!uploading || saving}
+            disabled={!requiredDone || !!uploading || saving}
             className="bg-cjtf-green hover:bg-cjtf-green-dark"
           >
             {saving ? 'Saving…' : 'Next Step →'}

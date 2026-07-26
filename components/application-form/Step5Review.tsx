@@ -32,21 +32,33 @@ export default function Step5Review({ form, saving, onBack, onSubmit }: Props) {
 
         <div>
           <p className="text-xs font-semibold text-cjtf-green uppercase tracking-wide mb-1">Personal</p>
-          <Row label="Full Name" value={`${form.first_name} ${form.middle_name} ${form.last_name}`.trim()} />
+          <Row label="Full Name" value={`${form.title} ${form.first_name} ${form.middle_name} ${form.last_name}`.trim()} />
           <Row label="Date of Birth" value={form.date_of_birth} />
           <Row label="Gender" value={form.gender} />
-          <Row label="NIN" value={form.nin || '—'} />
-          <Row label="State of Origin" value={form.state_of_origin} />
-          <Row label="LGA" value={form.lga_of_origin} />
+          <Row label="Mother's Maiden Name" value={form.mother_maiden_name} />
+          <Row label="Place of Birth" value={form.place_of_birth} />
+          <Row label="Nationality" value={form.nationality} />
+          <Row label="Marital Status" value={form.marital_status} />
+          <Row label="Religion" value={form.religion} />
+          <Row label="Blood Group" value={form.blood_group} />
+          <Row label="Height" value={form.height} />
+          <Row label="Distinguishing Marks" value={form.distinguishing_marks} />
+          <Row label="Occupation" value={form.occupation} />
+          <Row label="Education" value={form.education} />
+          <Row label="NIN" value={form.nin} />
+          <Row label="State / LGA of Origin" value={`${form.state_of_origin} / ${form.lga_of_origin}`} />
         </div>
 
         <Separator />
 
         <div>
-          <p className="text-xs font-semibold text-cjtf-green uppercase tracking-wide mb-1">Contact</p>
+          <p className="text-xs font-semibold text-cjtf-green uppercase tracking-wide mb-1">Contact &amp; Residence</p>
           <Row label="Phone" value={form.phone_number} />
           <Row label="Email" value={form.email} />
+          <Row label="State / LGA of Residence" value={`${form.state_of_residence} / ${form.lga_of_residence}`} />
           <Row label="Address" value={form.residential_address} />
+          <Row label="BVN" value={form.bvn} />
+          <Row label="Other Means of ID" value={form.means_of_id_type ? `${form.means_of_id_type} — ${form.means_of_id_number}` : ''} />
         </div>
 
         <Separator />
@@ -56,6 +68,17 @@ export default function Step5Review({ form, saving, onBack, onSubmit }: Props) {
           <Row label="Name" value={form.next_of_kin_name} />
           <Row label="Phone" value={form.next_of_kin_phone} />
           <Row label="Relationship" value={form.next_of_kin_relationship} />
+          <Row label="Address" value={form.next_of_kin_address} />
+        </div>
+
+        <Separator />
+
+        <div>
+          <p className="text-xs font-semibold text-cjtf-green uppercase tracking-wide mb-1">Guarantor</p>
+          <Row label="Name" value={form.guarantor_name} />
+          <Row label="Phone" value={form.guarantor_phone} />
+          <Row label="Title / Position" value={form.guarantor_title} />
+          <Row label="Address" value={form.guarantor_address} />
         </div>
 
         <Separator />
@@ -65,6 +88,8 @@ export default function Step5Review({ form, saving, onBack, onSubmit }: Props) {
           <Row label="Passport Photo" value={form.passport_photo_url ? '✓ Uploaded' : '✗ Missing'} />
           <Row label="ID Document" value={form.id_document_url ? '✓ Uploaded' : 'Not provided'} />
           <Row label="Birth Certificate" value={form.birth_cert_url ? '✓ Uploaded' : 'Not provided'} />
+          <Row label="Declaration of Age" value={form.age_declaration_url ? '✓ Uploaded' : '✗ Missing'} />
+          <Row label="Guarantor Form" value={form.guarantor_form_url ? '✓ Uploaded' : '✗ Missing'} />
         </div>
 
         <div className="flex justify-between pt-2">
