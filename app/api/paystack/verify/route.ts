@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { verifyTransaction } from '@/lib/paystack'
+import { notifyPaymentComplete } from '@/lib/notifications'
 
 export async function POST(req: Request) {
   const supabase = createClient()
@@ -40,10 +41,7 @@ export async function POST(req: Request) {
   const bothPaid = types.includes('id_card') && types.includes('training')
 
   if (bothPaid) {
-    await service.from('applications').update({
-      status: 'PENDING_ICT_VERIFICATION',
-      updated_at: new Date().toISOString(),
-    }).eq('id', payment.application_id)
+    await notifyPaymentComplete(service, payment.application_id)
   }
 
   return NextResponse.json({ paid: true, bothPaid })

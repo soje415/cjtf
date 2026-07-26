@@ -1,6 +1,6 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import PaymentClient from '@/components/dashboards/PaymentClient'
+import VirtualAccountPayment from '@/components/dashboards/VirtualAccountPayment'
 
 export default async function PaymentPage() {
   const supabase = createClient()
@@ -11,7 +11,7 @@ export default async function PaymentPage() {
 
   const { data: app } = await service
     .from('applications')
-    .select('id, status, email, first_name, last_name')
+    .select('id, status, first_name, last_name')
     .eq('applicant_id', user.id)
     .maybeSingle()
 
@@ -19,21 +19,10 @@ export default async function PaymentPage() {
     redirect('/portal/applicant/dashboard')
   }
 
-  const { data: payments } = await service
-    .from('payments')
-    .select('*')
-    .eq('application_id', app.id)
-
-  const idCardPaid = payments?.some((p) => p.type === 'id_card' && p.status === 'success')
-  const trainingPaid = payments?.some((p) => p.type === 'training' && p.status === 'success')
-
   return (
-    <PaymentClient
+    <VirtualAccountPayment
       applicationId={app.id}
-      email={app.email || user.email || ''}
       name={`${app.first_name} ${app.last_name}`}
-      idCardPaid={!!idCardPaid}
-      trainingPaid={!!trainingPaid}
     />
   )
 }
