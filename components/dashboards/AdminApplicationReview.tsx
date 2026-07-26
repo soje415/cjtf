@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
@@ -23,6 +24,28 @@ export default function AdminApplicationReview({ application, payments, notes }:
   const router = useRouter()
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState<'approve' | 'reject' | null>(null)
+  const [waiveReason, setWaiveReason] = useState('')
+  const [waiving, setWaiving] = useState(false)
+
+  const isReview = application.status === 'PENDING_ADMIN_APPROVAL'
+
+  async function handleWaive() {
+    if (!waiveReason.trim()) { toast.error('Enter a reason to waive verification'); return }
+    setWaiving(true)
+    const res = await fetch(`/api/applications/${application.id}/waive-verification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: waiveReason }),
+    })
+    if (res.ok) {
+      toast.success('Identity verification waived')
+      router.refresh()
+    } else {
+      const d = await res.json()
+      toast.error(d.error || 'Failed to waive')
+    }
+    setWaiving(false)
+  }
 
   async function handleAction(action: 'approve' | 'reject') {
     if (!note.trim()) {
@@ -37,7 +60,7 @@ export default function AdminApplicationReview({ application, payments, notes }:
       body: JSON.stringify({ note }),
     })
     if (res.ok) {
-      toast.success(action === 'approve' ? 'Application approved! Forwarded to ICT for ID generation.' : 'Application rejected.')
+      toast.success(action === 'approve' ? 'Applicant cleared! Sent to training.' : 'Application rejected.')
       router.push('/portal/admin/dashboard')
     } else {
       const d = await res.json()
@@ -85,6 +108,46 @@ export default function AdminApplicationReview({ application, payments, notes }:
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">Identity Verification</CardTitle></CardHeader>
+        <CardContent className="text-sm space-y-2">
+          {application.identity_verified ? (
+            <p className="text-green-700 font-medium">
+              ✓ Verified via {application.identity_verify_method?.toUpperCase()}
+              {application.identity_verified_at && (
+                <span className="text-gray-400 font-normal ml-2">
+                  {new Date(application.identity_verified_at).toLocaleString('en-GB')}
+                </span>
+              )}
+            </p>
+          ) : application.identity_verify_waived ? (
+            <p className="text-amber-700 font-medium">
+              ⚠ Verification waived by staff
+              {application.identity_verify_waived_reason && (
+                <span className="text-gray-500 font-normal ml-2">— {application.identity_verify_waived_reason}</span>
+              )}
+            </p>
+          ) : (
+            <>
+              <p className="text-red-600 font-medium">✗ Identity not verified (no NIN/BVN match on file)</p>
+              {isReview && (
+                <div className="flex gap-2 pt-1">
+                  <Input
+                    value={waiveReason}
+                    onChange={(e) => setWaiveReason(e.target.value)}
+                    placeholder="Reason to waive (e.g. no NIN/BVN, verified manually)"
+                    className="flex-1"
+                  />
+                  <Button variant="outline" onClick={handleWaive} disabled={waiving}>
+                    {waiving ? 'Waiving…' : 'Waive'}
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {payments.length > 0 && (
         <Card>
@@ -141,7 +204,7 @@ export default function AdminApplicationReview({ application, payments, notes }:
             disabled={!!loading}
             className="bg-cjtf-green hover:bg-cjtf-green-dark"
           >
-            {loading === 'approve' ? 'Approving…' : 'Approve & Generate ID →'}
+            {loading === 'approve' ? 'Clearing…' : 'Clear & Send to Training →'}
           </Button>
         </div>
       </div>

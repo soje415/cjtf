@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
@@ -33,10 +34,30 @@ export default function IctApplicationReview({ application, payments, notes }: P
   const [generated, setGenerated] = useState<GeneratedResult | null>(null)
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null)
   const [capturing, setCapturing] = useState(false)
+  const [waiveReason, setWaiveReason] = useState('')
+  const [waiving, setWaiving] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
 
   const isVerification = application.status === 'PENDING_ICT_VERIFICATION'
   const isGenerating = application.status === 'APPROVED_GENERATING_ID'
+
+  async function handleWaive() {
+    if (!waiveReason.trim()) { toast.error('Enter a reason to waive verification'); return }
+    setWaiving(true)
+    const res = await fetch(`/api/applications/${application.id}/waive-verification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: waiveReason }),
+    })
+    if (res.ok) {
+      toast.success('Identity verification waived')
+      router.refresh()
+    } else {
+      const d = await res.json()
+      toast.error(d.error || 'Failed to waive')
+    }
+    setWaiving(false)
+  }
 
   async function handleForward() {
     setLoading(true)
@@ -260,6 +281,46 @@ export default function IctApplicationReview({ application, payments, notes }: P
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">Identity Verification</CardTitle></CardHeader>
+        <CardContent className="text-sm space-y-2">
+          {application.identity_verified ? (
+            <p className="text-green-700 font-medium">
+              ✓ Verified via {application.identity_verify_method?.toUpperCase()}
+              {application.identity_verified_at && (
+                <span className="text-gray-400 font-normal ml-2">
+                  {new Date(application.identity_verified_at).toLocaleString('en-GB')}
+                </span>
+              )}
+            </p>
+          ) : application.identity_verify_waived ? (
+            <p className="text-amber-700 font-medium">
+              ⚠ Verification waived by staff
+              {application.identity_verify_waived_reason && (
+                <span className="text-gray-500 font-normal ml-2">— {application.identity_verify_waived_reason}</span>
+              )}
+            </p>
+          ) : (
+            <>
+              <p className="text-red-600 font-medium">✗ Identity not verified (no NIN/BVN match on file)</p>
+              {isVerification && (
+                <div className="flex gap-2 pt-1">
+                  <Input
+                    value={waiveReason}
+                    onChange={(e) => setWaiveReason(e.target.value)}
+                    placeholder="Reason to waive (e.g. no NIN/BVN, verified manually)"
+                    className="flex-1"
+                  />
+                  <Button variant="outline" onClick={handleWaive} disabled={waiving}>
+                    {waiving ? 'Waiving…' : 'Waive'}
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm">Next of Kin</CardTitle></CardHeader>
