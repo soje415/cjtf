@@ -33,6 +33,7 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/auth') ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/paystack/webhook') ||
+    pathname.startsWith('/api/hyparrow/webhook') ||
     pathname.startsWith('/verify') ||
     pathname === '/' ||
     pathname.startsWith('/about')
@@ -72,6 +73,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(new URL(`/portal/${role}/dashboard`, request.url))
   }
   if (pathname.startsWith('/portal/admin') && role !== 'admin') {
+    return NextResponse.redirect(new URL(`/portal/${role}/dashboard`, request.url))
+  }
+  if (pathname.startsWith('/portal/executive') && role !== 'executive') {
     return NextResponse.redirect(new URL(`/portal/${role}/dashboard`, request.url))
   }
 

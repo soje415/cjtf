@@ -22,6 +22,9 @@ const NAV_LINKS: Record<Role, { label: string; href: string }[]> = {
   admin: [
     { label: 'Dashboard', href: '/portal/admin/dashboard' },
   ],
+  executive: [
+    { label: 'Oversight', href: '/portal/executive/dashboard' },
+  ],
 }
 
 const ROLE_LABELS: Record<Role, string> = {
@@ -29,6 +32,7 @@ const ROLE_LABELS: Record<Role, string> = {
   ict: 'ICT Officer',
   int: 'Intelligence Officer',
   admin: 'Admin Officer',
+  executive: 'Executive Oversight',
 }
 
 export default function PortalNav({ profile }: { profile: Profile }) {
