@@ -12,6 +12,7 @@ export interface IdCardPreviewProps {
   dateOfBirth: string
   gender: string
   nin?: string
+  bloodGroup?: string
   designation?: string
   issueDate: string
   photoUrl: string
@@ -42,7 +43,7 @@ function SmallField({ label, value }: { label: string; value: string }) {
 }
 
 export function IdCardPreview({
-  fullName, cjtfId, stateOfOrigin, lga, dateOfBirth, gender, nin,
+  fullName, cjtfId, stateOfOrigin, lga, dateOfBirth, gender, nin, bloodGroup,
   designation = 'VOLUNTEER MEMBER', issueDate, photoUrl, verifyUrl,
 }: IdCardPreviewProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
@@ -71,7 +72,7 @@ export function IdCardPreview({
       width: CARD_W, height: CARD_H,
       display: 'flex', flexDirection: 'row',
       fontFamily: 'Inter, Arial, sans-serif',
-      overflow: 'hidden', borderRadius: 8,
+      overflow: 'hidden', borderRadius: 8, position: 'relative',
       boxShadow: '0 8px 32px rgba(0,0,0,0.28)',
     }}>
 
@@ -83,20 +84,39 @@ export function IdCardPreview({
       </div>
 
       {/* ── MAIN CARD CONTENT ── */}
-      <div style={{ width: MAIN_W, height: CARD_H, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ width: MAIN_W, height: CARD_H, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+
+        {/* White base so the watermark has something to sit on */}
+        <div style={{ position: 'absolute', inset: 0, background: C.white, zIndex: 0 }} />
+
+        {/* Watermark */}
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 0 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/cjtf-logo.jpg" alt="" crossOrigin="anonymous"
+            style={{ width: 150, height: 150, objectFit: 'contain', opacity: 0.06, filter: 'grayscale(1)' }} />
+        </div>
+
+        {/* Foil / hologram accent */}
+        <div style={{
+          position: 'absolute', right: -10, bottom: 16, width: 46, height: 46, borderRadius: '50%',
+          background: 'conic-gradient(from 90deg, #c9a227, #fff6d9, #008751, #fff, #CC0000, #c9a227)',
+          opacity: 0.35, filter: 'blur(0.3px)', pointerEvents: 'none', zIndex: 0,
+        }} />
 
         {/* HEADER – black band */}
         <div style={{
           height: 46, background: C.black,
           display: 'flex', flexDirection: 'row', alignItems: 'center',
-          padding: '0 8px', gap: 6,
+          padding: '0 8px', gap: 6, position: 'relative', zIndex: 1,
         }}>
           <div style={{
-            width: 30, height: 30, borderRadius: 15, background: '#3a3a3a',
+            width: 30, height: 30, borderRadius: 15, background: '#3a3a3a', overflow: 'hidden',
             flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
             border: `1.5px solid ${C.gold}`,
           }}>
-            <span style={{ fontSize: 7, fontWeight: 800, color: C.white }}>CJTF</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/cjtf-logo.jpg" alt="CJTF" crossOrigin="anonymous"
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
           <div style={{ flex: 1 }}>
             <p style={{ fontSize: 8.5, fontWeight: 700, color: C.white, letterSpacing: 0.5, margin: 0 }}>
@@ -117,7 +137,7 @@ export function IdCardPreview({
           flex: 1,
           display: 'flex', flexDirection: 'row',
           padding: '5px 8px 4px 6px', gap: 7,
-          background: C.white,
+          position: 'relative', zIndex: 1,
         }}>
 
           {/* Photo column */}
@@ -149,6 +169,7 @@ export function IdCardPreview({
               <SmallField label="State of Origin" value={stateOfOrigin} />
               <SmallField label="LGA" value={lga} />
               {nin && <SmallField label="NIN" value={nin} />}
+              {bloodGroup && <SmallField label="Blood Group" value={bloodGroup} />}
               <SmallField label="Issue Date" value={issueDate} />
               <SmallField label="Expiry Date" value={expiryDate} />
             </div>
@@ -170,16 +191,16 @@ export function IdCardPreview({
 
         {/* GREEN FOOTER */}
         <div style={{
-          height: 18, background: C.green,
+          height: 18, background: C.green, position: 'relative', zIndex: 1,
           display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
           padding: '0 8px',
         }}>
-          <p style={{ fontSize: 5, color: C.white, margin: 0 }}>This card is the property of CJTF Nigeria. If found, return to nearest CJTF office.</p>
-          <p style={{ fontSize: 5, color: C.gold, margin: 0 }}>www.cjtf.gov.ng</p>
+          <p style={{ fontSize: 4.5, color: C.white, margin: 0 }}>Property of CJTF FCT Command. If found, return to nearest CJTF office.</p>
+          <p style={{ fontSize: 4.5, color: C.gold, margin: 0, fontWeight: 700 }}>ISSUING AUTHORITY: FCT COMMAND</p>
         </div>
 
         {/* BLACK BOTTOM STRIPE */}
-        <div style={{ height: 5, background: C.black }} />
+        <div style={{ height: 5, background: C.black, position: 'relative', zIndex: 1 }} />
       </div>
     </div>
   )

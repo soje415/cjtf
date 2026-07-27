@@ -38,6 +38,7 @@ export default async function IdCardPage() {
       dateOfBirth={dateOfBirth}
       gender={app.gender ?? ''}
       nin={app.nin ?? undefined}
+      bloodGroup={app.blood_group ?? undefined}
       designation="VOLUNTEER MEMBER"
       issueDate={issueDate}
       photoUrl={app.passport_photo_url ?? ''}

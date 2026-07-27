@@ -191,6 +191,7 @@ export default function IctApplicationReview({ application, payments, notes }: P
                 dateOfBirth={dateOfBirth}
                 gender={application.gender ?? ''}
                 nin={application.nin ?? undefined}
+                bloodGroup={application.blood_group ?? undefined}
                 designation="VOLUNTEER MEMBER"
                 issueDate={issueDate}
                 photoUrl={photoDataUrl ?? application.passport_photo_url ?? ''}
