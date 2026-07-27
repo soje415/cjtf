@@ -52,10 +52,11 @@ const OperationalPermit = forwardRef<HTMLDivElement, PermitProps>(function Opera
       <div style={{ position: 'absolute', inset: 26, border: `1px solid ${NAVY}` }} />
 
       {/* Watermark */}
-      <div style={{
-        position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 220, fontWeight: 800, color: NAVY, opacity: 0.04, letterSpacing: 8,
-      }}>CJTF</div>
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/cjtf-logo.jpg" alt="" crossOrigin="anonymous"
+          style={{ width: 460, height: 460, objectFit: 'contain', opacity: 0.06, filter: 'grayscale(1)' }} />
+      </div>
 
       {/* Content */}
       <div style={{ position: 'absolute', inset: 40, display: 'flex', flexDirection: 'column' }}>
@@ -70,8 +71,8 @@ const OperationalPermit = forwardRef<HTMLDivElement, PermitProps>(function Opera
             <div style={{ fontSize: 14, color: NAVY }}>Opposite Kaita Plaza by SDP Junction G/lada, Abuja</div>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/cjtf-logo.jpg" alt="CJTF" crossOrigin="anonymous"
-            style={{ width: 86, height: 86, borderRadius: 8, objectFit: 'cover', border: `2px solid ${NAVY}` }} />
+          <img src="/cjtf-flag.jpeg" alt="CJTF Flag" crossOrigin="anonymous"
+            style={{ width: 44, height: 86, borderRadius: 4, objectFit: 'cover', border: `2px solid ${NAVY}` }} />
         </div>
 
         {/* Title banner */}
