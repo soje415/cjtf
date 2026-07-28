@@ -35,6 +35,14 @@ const ROLES = [
     iconBg: '#ffedd5',
     icon: '⭐',
   },
+  {
+    key: 'executive',
+    title: 'Executive / DSS',
+    description: 'Read-only oversight access for Executive and DSS review.',
+    accent: '#334155',
+    iconBg: '#e2e8f0',
+    icon: '🛡️',
+  },
 ]
 
 const ROLE_LABELS: Record<string, { label: string; sub: string; accent: string; back: string }> = {
@@ -42,6 +50,7 @@ const ROLE_LABELS: Record<string, { label: string; sub: string; accent: string; 
   ict:       { label: 'ICT Officer Login',       sub: 'Sign in to access the verification queue',   accent: '#09ADE2', back: 'linear-gradient(135deg,#09ADE2 0%,#0790BC 100%)' },
   int:       { label: 'Intelligence Login',      sub: 'Sign in to access the screening queue',      accent: '#7c3aed', back: 'linear-gradient(135deg,#7c3aed 0%,#5b21b6 100%)' },
   admin:     { label: 'Admin / Command Login',   sub: 'Sign in to access the approval dashboard',   accent: '#ea580c', back: 'linear-gradient(135deg,#ea580c 0%,#c2410c 100%)' },
+  executive: { label: 'Executive / DSS Login',    sub: 'Sign in to access the oversight dashboard',  accent: '#334155', back: 'linear-gradient(135deg,#334155 0%,#1e293b 100%)' },
 }
 
 export default function LoginPage({

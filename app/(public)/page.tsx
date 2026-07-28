@@ -74,6 +74,20 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Office Registration CTA */}
+      <section className="py-14 px-4 bg-gray-50">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Registering a CJTF Office?</h2>
+          <p className="text-gray-500 text-sm mb-6 max-w-xl mx-auto">
+            Commanders and unit heads can request an Operational Permit to open a CJTF office in their
+            area council, subject to Intelligence and Command review.
+          </p>
+          <LinkButton href="/portal/applicant/office" size="lg" variant="outline" className="border-cjtf-green text-cjtf-green hover:bg-cjtf-green-light">
+            Register an Office &rarr;
+          </LinkButton>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="py-12 px-4 text-center" style={{ background: 'linear-gradient(135deg, #09ADE2 0%, #0790BC 100%)' }}>
         <h2 className="text-xl font-bold text-white mb-2">Ready to Apply?</h2>
