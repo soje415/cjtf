@@ -17,13 +17,13 @@ export default async function IctDashboard() {
 
   const { data: pending } = await service
     .from('applications')
-    .select('*, profiles(full_name)')
+    .select('*, profiles!applications_applicant_id_fkey(full_name)')
     .eq('status', 'PENDING_ICT_VERIFICATION')
     .order('submitted_at', { ascending: true })
 
   const { data: generating } = await service
     .from('applications')
-    .select('*, profiles(full_name)')
+    .select('*, profiles!applications_applicant_id_fkey(full_name)')
     .eq('status', 'APPROVED_GENERATING_ID')
     .order('admin_approved_at', { ascending: true })
 

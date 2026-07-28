@@ -44,7 +44,7 @@ export default async function ExecutiveDashboard() {
 
   const { data } = await service
     .from('applications')
-    .select('*, profiles(full_name)')
+    .select('*, profiles!applications_applicant_id_fkey(full_name)')
     .order('updated_at', { ascending: false })
 
   const apps = (data as (Application & { profiles?: { full_name: string } })[]) ?? []

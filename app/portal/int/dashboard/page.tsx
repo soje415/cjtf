@@ -17,7 +17,7 @@ export default async function IntDashboard() {
 
   const { data: apps } = await service
     .from('applications')
-    .select('*, profiles(full_name)')
+    .select('*, profiles!applications_applicant_id_fkey(full_name)')
     .eq('status', 'PENDING_INT_SCREENING')
     .order('ict_verified_at', { ascending: true })
 

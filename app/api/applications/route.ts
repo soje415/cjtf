@@ -43,7 +43,7 @@ export async function GET() {
     .select('role')
     .eq('id', user.id)
     .single()
-  let query = service.from('applications').select('*, profiles(full_name, phone)')
+  let query = service.from('applications').select('*, profiles!applications_applicant_id_fkey(full_name, phone)')
 
   if (profile?.role === 'applicant') {
     query = query.eq('applicant_id', user.id)
