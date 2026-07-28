@@ -43,7 +43,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const allowed = [
     'title', 'first_name', 'middle_name', 'last_name', 'date_of_birth', 'gender',
-    'phone_number', 'email', 'residential_address', 'nin', 'bvn',
+    'phone_number', 'email', 'residential_address', 'nin', 'bvn', 'identity_verify_waived',
     'office_name', 'office_designation', 'area_council', 'district',
     'office_address', 'landmark', 'office_photo_urls',
     'district_head_name', 'endorsement_doc_url',

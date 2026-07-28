@@ -31,6 +31,7 @@ type FormState = {
   bvn: string
   identity_verified: boolean
   identity_verify_method: string
+  identity_verify_waived: boolean
   office_name: string
   office_designation: string
   area_council: string
@@ -57,6 +58,7 @@ function initial(reg: OfficeRegistration | null): FormState {
     bvn: reg?.bvn ?? '',
     identity_verified: reg?.identity_verified ?? false,
     identity_verify_method: reg?.identity_verify_method ?? '',
+    identity_verify_waived: reg?.identity_verify_waived ?? false,
     office_name: reg?.office_name ?? '',
     office_designation: reg?.office_designation ?? '',
     area_council: reg?.area_council ?? '',
@@ -159,7 +161,7 @@ export default function OfficeRegistrationForm({
       </div>
 
       {step === 0 && (
-        <StepRegistrant form={form} update={update} saving={saving} ensureRegId={ensureRegId}
+        <StepRegistrant form={form} update={update} saving={saving} ensureRegId={ensureRegId} saveProgress={saveProgress}
           onNext={async () => { await saveProgress({}); setStep(1) }} />
       )}
       {step === 1 && (
@@ -178,15 +180,16 @@ export default function OfficeRegistrationForm({
 }
 
 // ── Step 0: registrant + identity verification ──
-function StepRegistrant({ form, update, saving, ensureRegId, onNext }: {
+function StepRegistrant({ form, update, saving, ensureRegId, saveProgress, onNext }: {
   form: FormState; update: (f: Partial<FormState>) => void; saving: boolean
-  ensureRegId: () => Promise<string | null>; onNext: () => void
+  ensureRegId: () => Promise<string | null>; saveProgress: (f: Partial<FormState>) => Promise<void>; onNext: () => void
 }) {
   const [method, setMethod] = useState<'nin' | 'bvn'>((form.identity_verify_method as 'nin' | 'bvn') || 'nin')
   const [number, setNumber] = useState(form.identity_verify_method === 'bvn' ? form.bvn : form.nin)
   const [verifying, setVerifying] = useState(false)
   const [verifyError, setVerifyError] = useState('')
   const verified = form.identity_verified
+  const waived = form.identity_verify_waived
   const lock = (field: keyof FormState) => verified && !!form[field]
 
   async function handleVerify() {
@@ -206,7 +209,7 @@ function StepRegistrant({ form, update, saving, ensureRegId, onNext }: {
       const fields: Partial<FormState> = {
         first_name: p.first_name, last_name: p.last_name, middle_name: p.middle_name || '',
         date_of_birth: p.date_of_birth, gender: p.gender,
-        identity_verified: true, identity_verify_method: method,
+        identity_verified: true, identity_verify_method: method, identity_verify_waived: false,
       }
       if (method === 'nin') fields.nin = number; else fields.bvn = number
       update(fields)
@@ -217,18 +220,45 @@ function StepRegistrant({ form, update, saving, ensureRegId, onNext }: {
     setVerifying(false)
   }
 
+  // PROTOTYPE: lets the registrant self-skip NIN/BVN verification when the
+  // service doesn't come up, instead of getting stuck. Persists immediately.
+  // Staff still see it as unverified/waived on review.
+  async function handleSkip() {
+    update({ identity_verify_waived: true })
+    await saveProgress({ identity_verify_waived: true })
+    toast('Verification skipped — you can continue for now.')
+  }
+
+  function handleRetryVerification() {
+    update({ identity_verify_waived: false })
+    saveProgress({ identity_verify_waived: false })
+  }
+
   const REQUIRED: [keyof FormState, string][] = [
     ['title', 'Title'], ['first_name', 'First name'], ['last_name', 'Last name'],
     ['phone_number', 'Phone number'], ['residential_address', 'Residential address'],
   ]
   const missing = REQUIRED.filter(([k]) => !form[k]).map(([, l]) => l)
-  const valid = verified && missing.length === 0
+  const valid = (verified || waived) && missing.length === 0
 
   return (
     <Card>
       <CardContent className="p-6 space-y-4">
-        <div className={`rounded-lg border p-4 ${verified ? 'border-green-300 bg-green-50' : 'border-cjtf-green/40 bg-cjtf-green/5'}`}>
-          {verified ? (
+        <div className={`rounded-lg border p-4 ${verified ? 'border-green-300 bg-green-50' : waived ? 'border-amber-300 bg-amber-50' : 'border-cjtf-green/40 bg-cjtf-green/5'}`}>
+          {waived && !verified ? (
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-semibold text-amber-800">Verification skipped</p>
+                <p className="text-xs text-amber-700 mt-1">
+                  You're continuing without NIN/BVN verification. Fill in your name, date of birth and
+                  gender yourself — staff will review this manually.
+                </p>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={handleRetryVerification}>
+                Try verification again
+              </Button>
+            </div>
+          ) : verified ? (
             <div>
               <p className="font-semibold text-green-800">✓ Identity verified <span className="text-xs font-normal text-green-700">via {form.identity_verify_method?.toUpperCase()}</span></p>
               <p className="text-sm text-gray-700 mt-1">{form.first_name} {form.middle_name} {form.last_name}</p>
@@ -250,6 +280,9 @@ function StepRegistrant({ form, update, saving, ensureRegId, onNext }: {
                 </Button>
               </div>
               {verifyError && <p className="text-sm text-red-600 mt-2">{verifyError}</p>}
+              <button type="button" onClick={handleSkip} className="text-xs text-gray-500 underline mt-2 hover:text-gray-700">
+                Verification service not working? Skip for now and continue.
+              </button>
             </>
           )}
         </div>
@@ -278,12 +311,12 @@ function StepRegistrant({ form, update, saving, ensureRegId, onNext }: {
         <div className="space-y-1"><Label>Residential Address *</Label>
           <Textarea value={form.residential_address} onChange={(e) => update({ residential_address: e.target.value })} placeholder="Your home address" /></div>
 
-        {!verified && (
+        {!verified && !waived && (
           <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-            Verify your NIN or BVN above to continue. Identity verification is required before you can submit.
+            Verify your NIN or BVN above to continue, or skip it if the service isn't responding.
           </p>
         )}
-        {verified && missing.length > 0 && (
+        {(verified || waived) && missing.length > 0 && (
           <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">Please complete: {missing.join(', ')}.</p>
         )}
 
@@ -478,7 +511,7 @@ function StepReview({ form, saving, onBack, onSubmit }: {
         <div>
           <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">Registrant</p>
           {row('Name', [form.title, form.first_name, form.middle_name, form.last_name].filter(Boolean).join(' '))}
-          {row('Identity', form.identity_verified ? `Verified (${form.identity_verify_method?.toUpperCase()})` : 'Not verified')}
+          {row('Identity', form.identity_verified ? `Verified (${form.identity_verify_method?.toUpperCase()})` : form.identity_verify_waived ? 'Skipped (unverified)' : 'Not verified')}
           {row('Phone', form.phone_number)}
         </div>
         <div>
