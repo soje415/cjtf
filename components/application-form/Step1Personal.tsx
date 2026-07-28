@@ -38,6 +38,7 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
   const [verifyError, setVerifyError] = useState('')
 
   const verified = form.identity_verified
+  const waived = form.identity_verify_waived
 
   async function handleVerify() {
     setVerifyError('')
@@ -72,6 +73,7 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
         gender: p.gender,
         identity_verified: true,
         identity_verify_method: method,
+        identity_verify_waived: false,
       }
       if (method === 'nin') fields.nin = number
       else fields.bvn = number
@@ -82,6 +84,22 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
       setVerifyError('Could not reach the verification service. Please try again.')
     }
     setVerifying(false)
+  }
+
+  // PROTOTYPE: lets the applicant self-skip NIN/BVN verification when the
+  // service doesn't come up, instead of getting stuck. Persists immediately
+  // so it survives a step change. ICT still sees it as unverified/waived on
+  // review. Re-tighten for production by removing this and requiring the
+  // ICT/admin-only /waive-verification route instead.
+  async function handleSkip() {
+    update({ identity_verify_waived: true })
+    await saveProgress({ identity_verify_waived: true })
+    toast('Verification skipped — you can continue for now.')
+  }
+
+  function handleRetryVerification() {
+    update({ identity_verify_waived: false })
+    saveProgress({ identity_verify_waived: false })
   }
 
   async function handleNext() {
@@ -105,7 +123,7 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
     ['lga_of_origin', 'LGA of origin'],
   ]
   const missing = REQUIRED.filter(([k]) => !form[k]).map(([, label]) => label)
-  const valid = form.identity_verified && missing.length === 0
+  const valid = (form.identity_verified || waived) && missing.length === 0
 
   // Only lock a KYC field if it actually came back with a value — otherwise the
   // applicant would be stuck with a blank, un-editable required field.
@@ -115,8 +133,21 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
     <Card>
       <CardContent className="p-6 space-y-4">
         {/* Identity verification — NIN or BVN against the government record */}
-        <div className={`rounded-lg border p-4 ${verified ? 'border-green-300 bg-green-50' : 'border-cjtf-green/40 bg-cjtf-green/5'}`}>
-          {verified ? (
+        <div className={`rounded-lg border p-4 ${verified ? 'border-green-300 bg-green-50' : waived ? 'border-amber-300 bg-amber-50' : 'border-cjtf-green/40 bg-cjtf-green/5'}`}>
+          {waived && !verified ? (
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-semibold text-amber-800">Verification skipped</p>
+                <p className="text-xs text-amber-700 mt-1">
+                  You're continuing without NIN/BVN verification. Fill in your name, date of birth and
+                  gender below yourself — staff will review this manually.
+                </p>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={handleRetryVerification}>
+                Try verification again
+              </Button>
+            </div>
+          ) : verified ? (
             <div className="flex items-start gap-4">
               {form.passport_photo_url && (
                 <Image
@@ -177,6 +208,13 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
                 </Button>
               </div>
               {verifyError && <p className="text-sm text-red-600 mt-2">{verifyError}</p>}
+              <button
+                type="button"
+                onClick={handleSkip}
+                className="text-xs text-gray-500 underline mt-2 hover:text-gray-700"
+              >
+                Verification service not working? Skip for now and continue.
+              </button>
             </>
           )}
         </div>
@@ -303,13 +341,13 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
           </div>
         </div>
 
-        {!verified && (
+        {!verified && !waived && (
           <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-            Verify your NIN or BVN above to continue. Identity verification is required before you can submit.
+            Verify your NIN or BVN above to continue, or skip it if the service isn't responding.
           </p>
         )}
 
-        {verified && missing.length > 0 && (
+        {(verified || waived) && missing.length > 0 && (
           <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
             Please complete: {missing.join(', ')}.
           </p>

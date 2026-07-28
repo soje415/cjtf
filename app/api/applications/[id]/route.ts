@@ -48,7 +48,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     'mother_maiden_name','place_of_birth','nationality','marital_status','religion',
     'blood_group','height','distinguishing_marks','occupation','education',
     'state_of_origin','lga_of_origin','state_of_residence','lga_of_residence',
-    'residential_address','phone_number','email','nin','bvn',
+    'residential_address','phone_number','email','nin','bvn','identity_verify_waived',
     'means_of_id_type','means_of_id_number',
     'next_of_kin_name','next_of_kin_phone','next_of_kin_relationship','next_of_kin_address',
     'guarantor_name','guarantor_phone','guarantor_title','guarantor_address',

@@ -56,6 +56,7 @@ export type FormData = {
   nin: string
   identity_verified: boolean
   identity_verify_method: string
+  identity_verify_waived: boolean
   passport_photo_url: string
   id_document_url: string
   birth_cert_url: string
@@ -72,7 +73,7 @@ const EMPTY_FORM: FormData = {
   phone_number: '', email: '', bvn: '', means_of_id_type: '', means_of_id_number: '',
   next_of_kin_name: '', next_of_kin_phone: '', next_of_kin_relationship: '', next_of_kin_address: '',
   guarantor_name: '', guarantor_phone: '', guarantor_title: '', guarantor_address: '',
-  nin: '', identity_verified: false, identity_verify_method: '',
+  nin: '', identity_verified: false, identity_verify_method: '', identity_verify_waived: false,
   passport_photo_url: '', id_document_url: '', birth_cert_url: '',
   guarantor_form_url: '', age_declaration_url: '',
 }
@@ -128,6 +129,7 @@ export default function ApplicationForm({
       nin: existingApplication.nin ?? '',
       identity_verified: existingApplication.identity_verified ?? false,
       identity_verify_method: existingApplication.identity_verify_method ?? '',
+      identity_verify_waived: existingApplication.identity_verify_waived ?? false,
       passport_photo_url: existingApplication.passport_photo_url ?? '',
       id_document_url: existingApplication.id_document_url ?? '',
       birth_cert_url: existingApplication.birth_cert_url ?? '',
