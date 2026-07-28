@@ -47,10 +47,13 @@ export interface HyparrowTransaction {
   customerId: string
 }
 
-// Payment endpoints are single-wrapped: { success, message, data: {...} }
+// Payment endpoints are single-wrapped: { success, message, data: {...} }.
+// Error responses vary: some use { success:false, message }, others (e.g.
+// "customer already exists") use { success:false, error } instead — check both.
 interface Envelope<T> {
   success?: boolean
   message?: string
+  error?: string
   data?: T
 }
 
@@ -78,7 +81,7 @@ async function call<T>(method: 'POST' | 'GET', path: string, body?: Record<strin
   }
 
   if (!res.ok || json.success === false || !json.data) {
-    throw new Error(json.message || `Hyparrow request failed (${res.status}).`)
+    throw new Error(json.message || json.error || `Hyparrow request failed (${res.status}).`)
   }
   return json.data
 }
