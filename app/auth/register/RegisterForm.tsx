@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-export default function RegisterForm() {
+export default function RegisterForm({ next }: { next?: string }) {
   const [loading, setLoading] = useState(false)
 
   return (
@@ -12,6 +12,7 @@ export default function RegisterForm() {
       onSubmit={() => setLoading(true)}
       className="space-y-3"
     >
+      {next && <input type="hidden" name="next" value={next} />}
       <div className="space-y-1">
         <label htmlFor="fullName" className="text-sm font-medium text-gray-700">Full Name</label>
         <input id="fullName" name="fullName" type="text" required placeholder="John Doe"

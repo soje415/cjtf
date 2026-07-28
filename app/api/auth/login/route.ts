@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { createServiceClient } from '@/lib/supabase/server'
+import { safeNext } from '@/lib/safe-next'
 
 export async function POST(req: NextRequest) {
   const formData = await req.formData()
   const email = formData.get('email') as string
   const password = formData.get('password') as string
+  const next = safeNext(formData.get('next') as string | null)
 
   const origin = req.nextUrl.origin
   const cookieJar: { name: string; value: string; options: Record<string, unknown> }[] = []
@@ -39,8 +41,9 @@ export async function POST(req: NextRequest) {
     .single()
 
   const role = profile?.role ?? 'applicant'
+  const target = role === 'applicant' && next ? next : `/portal/${role}/dashboard`
 
-  const res = NextResponse.redirect(`${origin}/portal/${role}/dashboard`, { status: 303 })
+  const res = NextResponse.redirect(`${origin}${target}`, { status: 303 })
   cookieJar.forEach(({ name, value, options }) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     res.cookies.set(name, value, options as any)

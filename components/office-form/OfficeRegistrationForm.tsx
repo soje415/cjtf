@@ -250,7 +250,7 @@ function StepRegistrant({ form, update, saving, ensureRegId, saveProgress, onNex
               <div>
                 <p className="font-semibold text-amber-800">Verification skipped</p>
                 <p className="text-xs text-amber-700 mt-1">
-                  You're continuing without NIN/BVN verification. Fill in your name, date of birth and
+                  You&apos;re continuing without NIN/BVN verification. Fill in your name, date of birth and
                   gender yourself — staff will review this manually.
                 </p>
               </div>
@@ -313,7 +313,7 @@ function StepRegistrant({ form, update, saving, ensureRegId, saveProgress, onNex
 
         {!verified && !waived && (
           <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-            Verify your NIN or BVN above to continue, or skip it if the service isn't responding.
+            Verify your NIN or BVN above to continue, or skip it if the service isn&apos;t responding.
           </p>
         )}
         {(verified || waived) && missing.length > 0 && (

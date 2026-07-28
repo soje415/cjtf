@@ -3,8 +3,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { sendSms } from '@/lib/termii'
 
 // POST: store the client-rendered Operational Permit PDF and mark the
-// registration COMPLETED. The registrant uploads the binary they rendered from
-// the permit template (mirrors app/api/applications/[id]/save-pdf).
+// registration COMPLETED. Only ICT renders and uploads the permit binary.
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const supabase = createClient()
@@ -20,11 +19,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       .single()
     if (!reg) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    // The ICT section generates/prints the permit; the registrant may also keep a
-    // copy. Allow either the ICT role or the owning registrant to save the PDF.
+    // Only ICT generates/prints the Operational Permit. The registrant may
+    // only ever download the PDF ICT already produced (see PermitDownload).
     const { data: profile } = await service.from('profiles').select('role').eq('id', user.id).single()
-    const isIct = profile?.role === 'ict'
-    if (!isIct && reg.registrant_id !== user.id) {
+    if (profile?.role !== 'ict') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
     if (reg.status !== 'APPROVED_GENERATING_CERT' && reg.status !== 'COMPLETED') {

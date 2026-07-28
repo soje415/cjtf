@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 
-export default function VerifyPhoneForm({ maskedPhone, hasPhone }: { maskedPhone: string; hasPhone: boolean }) {
+export default function VerifyPhoneForm({ maskedPhone, hasPhone, next }: { maskedPhone: string; hasPhone: boolean; next?: string | null }) {
   const router = useRouter()
   const [sent, setSent] = useState(false)
   const [code, setCode] = useState('')
@@ -47,7 +47,7 @@ export default function VerifyPhoneForm({ maskedPhone, hasPhone }: { maskedPhone
     const data = await res.json().catch(() => ({}))
     if (res.ok) {
       toast.success('Phone number verified!')
-      router.replace('/portal/applicant/dashboard')
+      router.replace(next || '/portal/applicant/dashboard')
       router.refresh()
     } else {
       toast.error(data.error || 'Verification failed')

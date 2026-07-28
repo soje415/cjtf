@@ -139,7 +139,7 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
               <div>
                 <p className="font-semibold text-amber-800">Verification skipped</p>
                 <p className="text-xs text-amber-700 mt-1">
-                  You're continuing without NIN/BVN verification. Fill in your name, date of birth and
+                  You&apos;re continuing without NIN/BVN verification. Fill in your name, date of birth and
                   gender below yourself — staff will review this manually.
                 </p>
               </div>
@@ -343,7 +343,7 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
 
         {!verified && !waived && (
           <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-            Verify your NIN or BVN above to continue, or skip it if the service isn't responding.
+            Verify your NIN or BVN above to continue, or skip it if the service isn&apos;t responding.
           </p>
         )}
 

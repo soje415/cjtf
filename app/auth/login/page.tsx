@@ -56,10 +56,12 @@ const ROLE_LABELS: Record<string, { label: string; sub: string; accent: string; 
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: { role?: string; error?: string }
+  searchParams: { role?: string; error?: string; next?: string; message?: string }
 }) {
   const role = searchParams.role
   const roleConfig = role ? ROLE_LABELS[role] : null
+  const next = searchParams.next
+  const registerHref = next ? `/auth/register?next=${encodeURIComponent(next)}` : '/auth/register'
 
   // ── Role picker ──────────────────────────────────────────────────────────
   if (!roleConfig) {
@@ -119,7 +121,7 @@ export default function LoginPage({
 
           <p className="text-white/30 text-xs mt-10">
             New applicant?{' '}
-            <Link href="/auth/register" className="text-white/60 hover:text-white underline">
+            <Link href={registerHref} className="text-white/60 hover:text-white underline">
               Register here
             </Link>
           </p>
@@ -164,13 +166,22 @@ export default function LoginPage({
                 {searchParams.error}
               </div>
             )}
+            {searchParams.message && (
+              <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg p-3 mb-4">
+                {searchParams.message}
+              </div>
+            )}
 
-            <LoginForm accentColor={roleConfig.accent} />
+            <LoginForm accentColor={roleConfig.accent} next={next} />
+
+            <p className="text-center text-xs text-gray-400 mt-3">
+              <Link href="/auth/forgot-password" className="hover:underline">Forgot password?</Link>
+            </p>
 
             {role === 'applicant' && (
               <p className="text-center text-sm text-gray-500 mt-4">
                 New applicant?{' '}
-                <Link href="/auth/register" className="font-medium hover:underline" style={{ color: roleConfig.accent }}>
+                <Link href={registerHref} className="font-medium hover:underline" style={{ color: roleConfig.accent }}>
                   Register here
                 </Link>
               </p>

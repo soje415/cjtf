@@ -1,10 +1,15 @@
 import Image from 'next/image'
-import Link from 'next/link'
-import RegisterForm from './RegisterForm'
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import ResetPasswordForm from './ResetPasswordForm'
 
-export default function RegisterPage({ searchParams }: { searchParams: { error?: string; next?: string } }) {
-  const next = searchParams.next
-  const loginHref = next ? `/auth/login?next=${encodeURIComponent(next)}` : '/auth/login'
+export default async function ResetPasswordPage({ searchParams }: { searchParams: { error?: string } }) {
+  const supabase = createClient()
+  const { data: { session } } = await supabase.auth.getSession()
+
+  // Only reachable with the temporary session the reset-link callback sets.
+  if (!session) redirect('/auth/forgot-password')
+
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(135deg, #09ADE2 0%, #0790BC 100%)' }}>
       <div className="h-2 flex">
@@ -25,8 +30,8 @@ export default function RegisterPage({ searchParams }: { searchParams: { error?:
                 className="rounded-full border-4 border-cjtf-yellow shadow-lg"
               />
             </div>
-            <h1 className="text-xl font-bold text-gray-800">Create Applicant Account</h1>
-            <p className="text-xs text-gray-500 mt-1">Register to begin your CJTF recruitment application</p>
+            <h1 className="text-xl font-bold text-gray-800">Set a new password</h1>
+            <p className="text-xs text-gray-500 mt-1">Choose a new password for your account.</p>
           </div>
 
           <div className="p-8 pt-4">
@@ -35,15 +40,7 @@ export default function RegisterPage({ searchParams }: { searchParams: { error?:
                 {searchParams.error}
               </div>
             )}
-
-            <RegisterForm next={next} />
-
-            <p className="text-center text-sm text-gray-500 mt-4">
-              Already registered?{' '}
-              <Link href={loginHref} className="text-cjtf-blue font-medium hover:underline">
-                Sign in here
-              </Link>
-            </p>
+            <ResetPasswordForm />
           </div>
         </div>
       </div>

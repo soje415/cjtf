@@ -1,49 +1,21 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { toast } from 'sonner'
-import { captureElementAsA4Pdf } from '@/lib/capture-pdf'
 import OperationalPermit, { PermitProps } from './OperationalPermit'
 
 export default function PermitDownload({
-  registrationId,
   permit,
   initialPdfUrl,
 }: {
-  registrationId: string
   permit: PermitProps
   initialPdfUrl: string | null
 }) {
   const cardRef = useRef<HTMLDivElement>(null)
-  const [pdfUrl, setPdfUrl] = useState<string | null>(initialPdfUrl)
-  const [saving, setSaving] = useState(false)
-  const generatedOnce = useRef(false)
-
-  // If the permit PDF hasn't been generated yet, render it once and upload.
-  useEffect(() => {
-    if (pdfUrl || generatedOnce.current) return
-    generatedOnce.current = true
-    const t = setTimeout(async () => {
-      if (!cardRef.current) return
-      setSaving(true)
-      try {
-        const blob = await captureElementAsA4Pdf(cardRef.current)
-        const res = await fetch(`/api/office/${registrationId}/save-cert`, {
-          method: 'POST', headers: { 'Content-Type': 'application/pdf' }, body: blob,
-        })
-        const data = await res.json()
-        if (res.ok) { setPdfUrl(data.pdfUrl); toast.success('Operational Permit ready!') }
-        else toast.error('Permit saved locally but upload failed: ' + (data.error ?? ''))
-      } catch (e) {
-        toast.error('Could not generate the permit PDF: ' + String(e))
-      }
-      setSaving(false)
-    }, 400)
-    return () => clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // ICT generates and saves the permit PDF (see PermitGenerate + save-cert).
+  // The registrant only ever downloads what's already been issued.
+  const pdfUrl = initialPdfUrl
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -82,7 +54,7 @@ export default function PermitDownload({
                 </Button>
               </>
             ) : (
-              <p className="text-sm text-gray-500">{saving ? 'Generating permit…' : 'Preparing permit…'}</p>
+              <p className="text-sm text-gray-500">Your permit is being finalized by ICT — check back shortly.</p>
             )}
           </div>
         </CardContent>

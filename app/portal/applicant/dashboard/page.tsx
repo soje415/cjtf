@@ -145,15 +145,6 @@ export default async function ApplicantDashboard() {
           )}
         </div>
       )}
-
-      <div className="pt-2 border-t">
-        <p className="text-sm text-gray-500">
-          Registering a CJTF office instead?{' '}
-          <Link href="/portal/applicant/office" className="text-cjtf-green font-medium hover:underline">
-            Register an Office &rarr;
-          </Link>
-        </p>
-      </div>
     </div>
   )
 }
