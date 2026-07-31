@@ -1,5 +1,6 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import VerifyPhoneForm from '@/components/dashboards/VerifyPhoneForm'
 import { safeNext } from '@/lib/safe-next'
 
@@ -10,7 +11,11 @@ export default async function VerifyPhonePage({ searchParams }: { searchParams: 
   const user = session?.user
   if (!user) redirect('/auth/login')
 
-  const next = safeNext(searchParams.next)
+  // Fall back to the office_intent cookie when `next` didn't survive the
+  // redirect chain — otherwise an office registrant who ends up on this
+  // (recruitment-only) OTP gate gets dropped into the recruitment dashboard.
+  const officeIntentCookie = cookies().get('office_intent')?.value === '1'
+  const next = safeNext(searchParams.next) ?? (officeIntentCookie ? '/portal/applicant/office' : null)
 
   const { data: profile } = await service
     .from('profiles')

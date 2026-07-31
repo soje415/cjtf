@@ -8,6 +8,9 @@ export async function POST(req: NextRequest) {
   const email = formData.get('email') as string
   const password = formData.get('password') as string
   const next = safeNext(formData.get('next') as string | null)
+  const ROLE_PICKER_KEYS = ['applicant', 'ict', 'int', 'admin', 'executive', 'office']
+  const roleParam = formData.get('role') as string | null
+  const submittedRole = roleParam && ROLE_PICKER_KEYS.includes(roleParam) ? roleParam : null
 
   const origin = req.nextUrl.origin
   const cookieJar: { name: string; value: string; options: Record<string, unknown> }[] = []
@@ -26,8 +29,14 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
+    // Preserve which role screen (and `next` destination) the user was on —
+    // otherwise a wrong password bounces an office/applicant login attempt
+    // back to the generic role picker and loses its destination.
+    const errParams = new URLSearchParams({ error: error.message })
+    if (next) errParams.set('next', next)
+    if (submittedRole) errParams.set('role', submittedRole)
     return NextResponse.redirect(
-      `${origin}/auth/login?error=${encodeURIComponent(error.message)}`,
+      `${origin}/auth/login?${errParams.toString()}`,
       { status: 303 }
     )
   }
@@ -41,7 +50,10 @@ export async function POST(req: NextRequest) {
     .single()
 
   const role = profile?.role ?? 'applicant'
-  const target = role === 'applicant' && next ? next : `/portal/${role}/dashboard`
+  // Fall back to the office_intent cookie (set by middleware on any visit to
+  // /portal/applicant/office) when `next` didn't survive the redirect chain.
+  const officeIntent = next ?? (req.cookies.get('office_intent')?.value === '1' ? '/portal/applicant/office' : null)
+  const target = role === 'applicant' && officeIntent ? officeIntent : `/portal/${role}/dashboard`
 
   const res = NextResponse.redirect(`${origin}${target}`, { status: 303 })
   cookieJar.forEach(({ name, value, options }) => {
