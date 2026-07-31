@@ -12,8 +12,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
-import { IdCardPreview } from '@/components/id-card/IdCardDownload'
-import { captureElementAsPdf, toDataUrl } from '@/lib/capture-pdf'
+import { IdCardPreview, IdCardBackPreview } from '@/components/id-card/IdCardDownload'
+import { captureFrontAndBackAsPdf, toDataUrl } from '@/lib/capture-pdf'
 import { toast } from 'sonner'
 
 interface Props {
@@ -36,7 +36,9 @@ export default function IctApplicationReview({ application, payments, notes }: P
   const [capturing, setCapturing] = useState(false)
   const [waiveReason, setWaiveReason] = useState('')
   const [waiving, setWaiving] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
+  const backRef = useRef<HTMLDivElement>(null)
 
   const isVerification = application.status === 'PENDING_ICT_VERIFICATION'
   const isGenerating = application.status === 'APPROVED_GENERATING_ID'
@@ -94,17 +96,25 @@ export default function IctApplicationReview({ application, payments, notes }: P
         try { photoUrl = await toDataUrl(photoUrl) } catch { /* use original url */ }
       }
       setPhotoDataUrl(photoUrl)
+
+      // 3. Generate the QR code up front so html2canvas never races its image load
+      const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify/${application.id}`
+      try {
+        const QRCode = await import('qrcode')
+        setQrDataUrl(await QRCode.toDataURL(verifyUrl, { width: 96, margin: 1 }))
+      } catch { /* card renders without a QR image if this fails */ }
+
       setGenerated({ cjtfId: d.cjtfId, pdfUrl: null })
       toast.success('ID assigned — capturing card…')
 
-      // 3. Give React one tick to render the card, then capture
+      // 4. Give React one tick to render front + back, then capture both
       setTimeout(async () => {
-        if (!cardRef.current) return
+        if (!cardRef.current || !backRef.current) return
         setCapturing(true)
         try {
-          const blob = await captureElementAsPdf(cardRef.current)
+          const blob = await captureFrontAndBackAsPdf(cardRef.current, backRef.current)
 
-          // 4. Upload to Supabase via server route
+          // 5. Upload to Supabase via server route
           const uploadRes = await fetch(`/api/applications/${application.id}/save-pdf`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/pdf' },
@@ -138,10 +148,10 @@ export default function IctApplicationReview({ application, payments, notes }: P
       return
     }
     // Fallback: re-capture if no pdfUrl
-    if (!cardRef.current) return
+    if (!cardRef.current || !backRef.current) return
     setCapturing(true)
     try {
-      const blob = await captureElementAsPdf(cardRef.current)
+      const blob = await captureFrontAndBackAsPdf(cardRef.current, backRef.current)
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -176,10 +186,10 @@ export default function IctApplicationReview({ application, payments, notes }: P
           </div>
         </div>
 
-        {/* Card preview — this exact element is captured for the PDF */}
+        {/* Card preview — these exact elements are captured for the PDF */}
         <div>
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-            Generated ID Card {capturing && <span className="text-yellow-500">— capturing PDF…</span>}
+            Generated ID Card — Front {capturing && <span className="text-yellow-500">— capturing PDF…</span>}
           </p>
           <div className="flex justify-center">
             <div ref={cardRef}>
@@ -196,7 +206,17 @@ export default function IctApplicationReview({ application, payments, notes }: P
                 issueDate={issueDate}
                 photoUrl={photoDataUrl ?? application.passport_photo_url ?? ''}
                 verifyUrl={verifyUrl}
+                qrDataUrl={qrDataUrl}
               />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Generated ID Card — Back</p>
+          <div className="flex justify-center">
+            <div ref={backRef}>
+              <IdCardBackPreview cjtfId={generated.cjtfId} />
             </div>
           </div>
         </div>

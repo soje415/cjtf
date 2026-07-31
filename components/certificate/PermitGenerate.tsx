@@ -28,6 +28,7 @@ export default function PermitGenerate({
   const [certNumber, setCertNumber] = useState<string | null>(initialCertNumber)
   const [pdfUrl, setPdfUrl] = useState<string | null>(initialPdfUrl)
   const [busy, setBusy] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
 
   async function generate() {
     setBusy(true)
@@ -38,6 +39,13 @@ export default function PermitGenerate({
       if (!res.ok) { toast.error(d.error || 'Could not assign permit number'); setBusy(false); return }
       setCertNumber(d.certNumber)
       toast.success(`Permit number assigned: ${d.certNumber}`)
+
+      // 1b. Generate the QR up front so html2canvas never races its image load
+      try {
+        const QRCode = await import('qrcode')
+        const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify/office/${registrationId}`
+        setQrDataUrl(await QRCode.toDataURL(verifyUrl, { width: 150, margin: 1 }))
+      } catch { /* permit renders without a QR image if this fails */ }
 
       // 2. Let the permit render with the number, then capture + save
       setTimeout(async () => {
@@ -116,6 +124,7 @@ export default function PermitGenerate({
             officeName={officeName}
             permitNumber={certNumber ?? '—'}
             dateIssued={dateIssued}
+            qrDataUrl={qrDataUrl}
           />
         </div>
       </div>

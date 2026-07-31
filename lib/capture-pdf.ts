@@ -30,6 +30,26 @@ export async function captureElementAsPdf(element: HTMLElement): Promise<Blob> {
   return pdf.output('blob')
 }
 
+/** Capture two CR80 elements (front, back) as a 2-page landscape PDF. */
+export async function captureFrontAndBackAsPdf(frontEl: HTMLElement, backEl: HTMLElement): Promise<Blob> {
+  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+    import('html2canvas'),
+    import('jspdf'),
+  ])
+
+  const captureOpts = { scale: 3, useCORS: true, allowTaint: false, backgroundColor: null, logging: false }
+  const [frontCanvas, backCanvas] = await Promise.all([
+    html2canvas(frontEl, captureOpts),
+    html2canvas(backEl, captureOpts),
+  ])
+
+  const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [CR80_W_MM, CR80_H_MM] })
+  pdf.addImage(frontCanvas.toDataURL('image/png'), 'PNG', 0, 0, CR80_W_MM, CR80_H_MM)
+  pdf.addPage([CR80_W_MM, CR80_H_MM], 'landscape')
+  pdf.addImage(backCanvas.toDataURL('image/png'), 'PNG', 0, 0, CR80_W_MM, CR80_H_MM)
+  return pdf.output('blob')
+}
+
 // A4 landscape: 297 mm × 210 mm
 const A4_W_MM = 297
 const A4_H_MM = 210

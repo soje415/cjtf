@@ -8,6 +8,7 @@ export interface PermitProps {
   officeName: string
   permitNumber: string
   dateIssued: string
+  qrDataUrl?: string | null
 }
 
 const NAVY = '#0b1f4e'
@@ -33,7 +34,7 @@ function FillLine({ value }: { value: string }) {
 }
 
 const OperationalPermit = forwardRef<HTMLDivElement, PermitProps>(function OperationalPermit(
-  { fullName, officeAddress, officeName, permitNumber, dateIssued }, ref,
+  { fullName, officeAddress, officeName, permitNumber, dateIssued, qrDataUrl }, ref,
 ) {
   return (
     <div ref={ref} style={{
@@ -116,6 +117,17 @@ const OperationalPermit = forwardRef<HTMLDivElement, PermitProps>(function Opera
             border: `3px solid #9c7d1e`, display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: '#5b4708', fontWeight: 800, fontSize: 22, boxShadow: 'inset 0 0 8px rgba(0,0,0,0.25)',
           }}>CJTF</div>
+
+          {/* QR verification */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            {qrDataUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={qrDataUrl} alt="Scan to verify" style={{ width: 66, height: 66, border: `2px solid ${GOLD}`, borderRadius: 4, background: '#fff', padding: 3 }} />
+            ) : (
+              <div style={{ width: 66, height: 66, border: `1px dashed ${NAVY}`, borderRadius: 4, opacity: 0.4 }} />
+            )}
+            <div style={{ fontSize: 10, color: NAVY, textAlign: 'center', letterSpacing: 0.5 }}>SCAN TO VERIFY</div>
+          </div>
 
           {/* Signature */}
           <div style={{ textAlign: 'center', fontSize: 15 }}>

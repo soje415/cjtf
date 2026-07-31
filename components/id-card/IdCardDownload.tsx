@@ -17,6 +17,9 @@ export interface IdCardPreviewProps {
   issueDate: string
   photoUrl: string
   verifyUrl?: string
+  /** Pre-generated QR data URL. When set, skips the internal async fetch
+   * (used by capture flows so html2canvas never races the QR image). */
+  qrDataUrl?: string | null
 }
 
 interface DownloadProps extends IdCardPreviewProps {
@@ -44,19 +47,21 @@ function SmallField({ label, value }: { label: string; value: string }) {
 
 export function IdCardPreview({
   fullName, cjtfId, stateOfOrigin, lga, dateOfBirth, gender, nin, bloodGroup,
-  designation = 'VOLUNTEER MEMBER', issueDate, photoUrl, verifyUrl,
+  designation = 'VOLUNTEER MEMBER', issueDate, photoUrl, verifyUrl, qrDataUrl: qrDataUrlProp,
 }: IdCardPreviewProps) {
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  const [qrDataUrlState, setQrDataUrlState] = useState<string | null>(null)
   const mounted = useRef(true)
 
   useEffect(() => {
     mounted.current = true
-    if (!verifyUrl) return
+    if (qrDataUrlProp !== undefined || !verifyUrl) return
     import('qrcode').then(QRCode => QRCode.toDataURL(verifyUrl, { width: 96, margin: 1 }))
-      .then(url => { if (mounted.current) setQrDataUrl(url) })
+      .then(url => { if (mounted.current) setQrDataUrlState(url) })
       .catch(() => {})
     return () => { mounted.current = false }
-  }, [verifyUrl])
+  }, [verifyUrl, qrDataUrlProp])
+
+  const qrDataUrl = qrDataUrlProp !== undefined ? qrDataUrlProp : qrDataUrlState
 
   const expiryYear = new Date().getFullYear() + 4
   const expiryDate = `${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}/${expiryYear}`
@@ -206,6 +211,99 @@ export function IdCardPreview({
   )
 }
 
+export interface IdCardBackPreviewProps {
+  cjtfId: string
+}
+
+const TERMS = [
+  'This card is non-transferable and remains the property of CJTF Nigeria.',
+  'Must be surrendered on demand to an authorized CJTF or law enforcement officer.',
+  'Loss or theft must be reported immediately to the nearest CJTF office.',
+]
+
+export function IdCardBackPreview({ cjtfId }: IdCardBackPreviewProps) {
+  // Same footprint as the front so the two pages line up when printed.
+  const STRIPE = 15
+  const CARD_W = 342
+  const CARD_H = 216
+  const MAIN_W = CARD_W - STRIPE
+
+  return (
+    <div style={{
+      width: CARD_W, height: CARD_H,
+      display: 'flex', flexDirection: 'row',
+      fontFamily: 'Inter, Arial, sans-serif',
+      overflow: 'hidden', borderRadius: 8, position: 'relative',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.28)',
+    }}>
+      {/* ── LEFT COLOUR STRIPE ── */}
+      <div style={{ width: STRIPE, height: CARD_H, display: 'flex', flexDirection: 'row', flexShrink: 0 }}>
+        <div style={{ flex: 1, background: C.green }} />
+        <div style={{ flex: 1, background: C.yellow }} />
+        <div style={{ flex: 1, background: C.red }} />
+      </div>
+
+      {/* ── MAIN CARD CONTENT ── */}
+      <div style={{ width: MAIN_W, height: CARD_H, display: 'flex', flexDirection: 'column', position: 'relative', background: C.white }}>
+
+        {/* Watermark */}
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 0 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/cjtf-logo.jpg" alt="" crossOrigin="anonymous"
+            style={{ width: 150, height: 150, objectFit: 'contain', opacity: 0.06, filter: 'grayscale(1)' }} />
+        </div>
+
+        {/* HEADER – black band */}
+        <div style={{
+          height: 22, background: C.black,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          position: 'relative', zIndex: 1,
+        }}>
+          <p style={{ fontSize: 6.5, fontWeight: 700, color: C.gold, letterSpacing: 1, margin: 0 }}>
+            TERMS &amp; CONDITIONS OF USE
+          </p>
+        </div>
+
+        {/* BODY */}
+        <div style={{ flex: 1, padding: '8px 10px 4px 10px', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+
+          {/* Terms */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {TERMS.map((t) => (
+              <p key={t} style={{ fontSize: 5.5, color: C.black, margin: 0, lineHeight: 1.35 }}>&bull;&nbsp; {t}</p>
+            ))}
+          </div>
+
+          {/* Signature strip */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'row', alignItems: 'flex-end', gap: 16, paddingBottom: 4 }}>
+            <div style={{ flex: 1, textAlign: 'center' }}>
+              <div style={{ borderBottom: `1px solid ${C.grey}`, height: 22 }} />
+              <p style={{ fontSize: 5, color: C.grey, margin: '2px 0 0 0' }}>Holder&apos;s Signature</p>
+            </div>
+            <div style={{ flex: 1, textAlign: 'center' }}>
+              <div style={{ borderBottom: `1px solid ${C.grey}`, height: 22 }} />
+              <p style={{ fontSize: 5, color: C.grey, margin: '2px 0 0 0' }}>Issuing Officer &amp; Stamp</p>
+            </div>
+          </div>
+        </div>
+
+        {/* GREEN FOOTER */}
+        <div style={{
+          height: 18, background: C.green, position: 'relative', zIndex: 1,
+          display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 8px',
+        }}>
+          <p style={{ fontSize: 4.5, color: C.white, margin: 0 }}>CJTF ID: {cjtfId}</p>
+          <p style={{ fontSize: 4.5, color: C.gold, margin: 0, fontWeight: 700 }}>www.cjtf.gov.ng</p>
+        </div>
+
+        {/* BLACK BOTTOM STRIPE */}
+        <div style={{ height: 5, background: C.black, position: 'relative', zIndex: 1 }} />
+      </div>
+    </div>
+  )
+}
+
 export default function IdCardDownload(props: DownloadProps) {
   const { fullName, cjtfId, pdfUrl } = props
 
@@ -214,7 +312,11 @@ export default function IdCardDownload(props: DownloadProps) {
       <style>{`
         @media print {
           body > * { display: none !important; }
-          #id-card-print-root { display: flex !important; justify-content: center; align-items: center; height: 100vh; }
+          #id-card-print-root {
+            display: flex !important; flex-direction: column;
+            justify-content: center; align-items: center; height: 100vh; gap: 0;
+          }
+          #id-card-print-front { page-break-after: always; }
         }
       `}</style>
 
@@ -224,10 +326,19 @@ export default function IdCardDownload(props: DownloadProps) {
           <p className="text-gray-500 text-sm mt-1">Your application has been approved. Download or print your official ID card.</p>
         </div>
 
-        <div>
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Card Preview</p>
-          <div id="id-card-print-root" className="flex justify-center">
-            <IdCardPreview {...props} />
+        <div id="id-card-print-root">
+          <div id="id-card-print-front">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Card Preview — Front</p>
+            <div className="flex justify-center">
+              <IdCardPreview {...props} />
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Card Preview — Back</p>
+            <div className="flex justify-center">
+              <IdCardBackPreview cjtfId={cjtfId} />
+            </div>
           </div>
         </div>
 
@@ -271,7 +382,7 @@ export default function IdCardDownload(props: DownloadProps) {
                 ['Print Quality', '300 DPI or higher'],
                 ['Card Thickness', '0.76 mm (standard PVC)'],
                 ['Lamination', 'Glossy or matte overlay'],
-                ['File Format', 'PDF (do not resize)'],
+                ['File Format', 'PDF, 2 pages (do not resize)'],
               ].map(([label, value]) => (
                 <div key={label} className="bg-gray-50 rounded-lg p-3">
                   <p className="text-xs text-gray-400 uppercase tracking-wide">{label}</p>
@@ -280,7 +391,8 @@ export default function IdCardDownload(props: DownloadProps) {
               ))}
             </div>
             <p className="text-xs text-gray-400 pt-1">
-              Print at 100% scale — do not use fit-to-page. The PDF is pre-sized to CR80.
+              Print at 100% scale — do not use fit-to-page. Page 1 is the front, page 2 is the back;
+              the PDF is pre-sized to CR80.
             </p>
           </CardContent>
         </Card>

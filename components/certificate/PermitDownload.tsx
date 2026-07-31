@@ -1,21 +1,31 @@
 'use client'
 
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import OperationalPermit, { PermitProps } from './OperationalPermit'
 
 export default function PermitDownload({
+  registrationId,
   permit,
   initialPdfUrl,
 }: {
-  permit: PermitProps
+  registrationId: string
+  permit: Omit<PermitProps, 'qrDataUrl'>
   initialPdfUrl: string | null
 }) {
   const cardRef = useRef<HTMLDivElement>(null)
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   // ICT generates and saves the permit PDF (see PermitGenerate + save-cert).
   // The registrant only ever downloads what's already been issued.
   const pdfUrl = initialPdfUrl
+
+  useEffect(() => {
+    const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify/office/${registrationId}`
+    import('qrcode').then(QRCode => QRCode.toDataURL(verifyUrl, { width: 150, margin: 1 }))
+      .then(setQrDataUrl)
+      .catch(() => {})
+  }, [registrationId])
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -30,7 +40,7 @@ export default function PermitDownload({
         <div className="inline-block shadow-xl" style={{ transformOrigin: 'top left' }}>
           {/* Rendered at full A4 px size; scaled down for screen preview */}
           <div style={{ transform: 'scale(0.62)', transformOrigin: 'top left', width: 1123 * 0.62, height: 794 * 0.62 }}>
-            <OperationalPermit ref={cardRef} {...permit} />
+            <OperationalPermit ref={cardRef} {...permit} qrDataUrl={qrDataUrl} />
           </div>
         </div>
       </div>
