@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-export default function LoginForm({ accentColor = '#09ADE2', next }: { accentColor?: string; next?: string }) {
+export default function LoginForm({ accentColor = '#09ADE2', next, role }: { accentColor?: string; next?: string; role?: string }) {
   const [loading, setLoading] = useState(false)
 
   return (
@@ -13,6 +13,7 @@ export default function LoginForm({ accentColor = '#09ADE2', next }: { accentCol
       className="space-y-4"
     >
       {next && <input type="hidden" name="next" value={next} />}
+      {role && <input type="hidden" name="role" value={role} />}
       <div className="space-y-1">
         <label htmlFor="email" className="text-sm font-medium text-gray-700">Email Address</label>
         <input

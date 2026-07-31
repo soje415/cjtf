@@ -10,12 +10,16 @@ export async function POST() {
 
   const service = createServiceClient()
 
-  // Reuse any existing non-rejected registration.
+  // Reuse any existing non-rejected registration. Ordered + limited so a
+  // stray duplicate row (e.g. from a double-submit race) can't make this
+  // query error out and silently fall through to creating yet another draft.
   const { data: existing } = await service
     .from('office_registrations')
     .select('id, status')
     .eq('registrant_id', user.id)
     .not('status', 'eq', 'REJECTED')
+    .order('created_at', { ascending: false })
+    .limit(1)
     .maybeSingle()
 
   if (existing) return NextResponse.json({ registration: existing })

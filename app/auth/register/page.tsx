@@ -2,9 +2,13 @@ import Image from 'next/image'
 import Link from 'next/link'
 import RegisterForm from './RegisterForm'
 
-export default function RegisterPage({ searchParams }: { searchParams: { error?: string; next?: string } }) {
+export default function RegisterPage({ searchParams }: { searchParams: { error?: string; next?: string; role?: string } }) {
   const next = searchParams.next
-  const loginHref = next ? `/auth/login?next=${encodeURIComponent(next)}` : '/auth/login'
+  const isOffice = searchParams.role === 'office'
+  const loginParams = new URLSearchParams()
+  if (next) loginParams.set('next', next)
+  if (isOffice) loginParams.set('role', 'office')
+  const loginHref = loginParams.size ? `/auth/login?${loginParams}` : '/auth/login'
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(135deg, #09ADE2 0%, #0790BC 100%)' }}>
       <div className="h-2 flex">
@@ -25,8 +29,14 @@ export default function RegisterPage({ searchParams }: { searchParams: { error?:
                 className="rounded-full border-4 border-cjtf-yellow shadow-lg"
               />
             </div>
-            <h1 className="text-xl font-bold text-gray-800">Create Applicant Account</h1>
-            <p className="text-xs text-gray-500 mt-1">Register to begin your CJTF recruitment application</p>
+            <h1 className="text-xl font-bold text-gray-800">
+              {isOffice ? 'Create Account' : 'Create Applicant Account'}
+            </h1>
+            <p className="text-xs text-gray-500 mt-1">
+              {isOffice
+                ? 'Register to submit your Office Registration and Operational Permit application'
+                : 'Register to begin your CJTF recruitment application'}
+            </p>
           </div>
 
           <div className="p-8 pt-4">
@@ -36,7 +46,7 @@ export default function RegisterPage({ searchParams }: { searchParams: { error?:
               </div>
             )}
 
-            <RegisterForm next={next} />
+            <RegisterForm next={next} role={isOffice ? 'office' : undefined} submitLabel={isOffice ? 'Create Account' : undefined} />
 
             <p className="text-center text-sm text-gray-500 mt-4">
               Already registered?{' '}

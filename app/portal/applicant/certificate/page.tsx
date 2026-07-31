@@ -32,6 +32,7 @@ export default async function CertificatePage() {
 
   return (
     <PermitDownload
+      registrationId={reg.id}
       initialPdfUrl={reg.cert_pdf_url ?? null}
       permit={{
         fullName,

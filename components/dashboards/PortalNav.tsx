@@ -2,17 +2,23 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
+import { usePathname } from 'next/navigation'
 import { Profile, Role } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 
-const NAV_LINKS: Record<Role, { label: string; href: string }[]> = {
-  applicant: [
-    { label: 'Dashboard', href: '/portal/applicant/dashboard' },
-    { label: 'My Application', href: '/portal/applicant/application' },
-    { label: 'Payment', href: '/portal/applicant/payment' },
-    { label: 'ID Card', href: '/portal/applicant/id-card' },
-  ],
+const RECRUITMENT_LINKS = [
+  { label: 'Dashboard', href: '/portal/applicant/dashboard' },
+  { label: 'My Application', href: '/portal/applicant/application' },
+  { label: 'Payment', href: '/portal/applicant/payment' },
+  { label: 'ID Card', href: '/portal/applicant/id-card' },
+]
+
+const OFFICE_LINKS = [
+  { label: 'Office Registration', href: '/portal/applicant/office' },
+]
+
+const NAV_LINKS: Record<Exclude<Role, 'applicant'>, { label: string; href: string }[]> = {
   ict: [
     { label: 'Dashboard', href: '/portal/ict/dashboard' },
   ],
@@ -35,14 +41,40 @@ const ROLE_LABELS: Record<Role, string> = {
   executive: 'Executive Oversight',
 }
 
-export default function PortalNav({ profile }: { profile: Profile }) {
+export default function PortalNav({
+  profile,
+  hasOfficeReg = false,
+  hasApplication = false,
+}: {
+  profile: Profile
+  hasOfficeReg?: boolean
+  hasApplication?: boolean
+}) {
+  const pathname = usePathname()
+
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
     toast.success('Signed out')
     window.location.href = '/auth/login'
   }
 
-  const links = NAV_LINKS[profile.role] || []
+  let links: { label: string; href: string }[]
+  if (profile.role === 'applicant') {
+    // Office registrants and recruitment applicants share the `applicant`
+    // role — pick nav links based on which flow(s) they're actually in,
+    // falling back to "currently browsing an office page" for the moment
+    // right after signup, before any DB row exists yet.
+    const inOfficeFlow = hasOfficeReg
+      || pathname.startsWith('/portal/applicant/office')
+      || pathname.startsWith('/portal/applicant/certificate')
+    const inRecruitmentFlow = hasApplication || !inOfficeFlow
+    links = [
+      ...(inRecruitmentFlow ? RECRUITMENT_LINKS : []),
+      ...(inOfficeFlow ? OFFICE_LINKS : []),
+    ]
+  } else {
+    links = NAV_LINKS[profile.role] || []
+  }
 
   return (
     <header className="bg-cjtf-blue text-white shadow-md">

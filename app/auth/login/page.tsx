@@ -43,6 +43,14 @@ const ROLES = [
     iconBg: '#e2e8f0',
     icon: '🛡️',
   },
+  {
+    key: 'office',
+    title: 'Office Registration',
+    description: 'Commanders and unit heads registering or managing a CJTF office.',
+    accent: '#0d9488',
+    iconBg: '#ccfbf1',
+    icon: '🏢',
+  },
 ]
 
 const ROLE_LABELS: Record<string, { label: string; sub: string; accent: string; back: string }> = {
@@ -51,6 +59,16 @@ const ROLE_LABELS: Record<string, { label: string; sub: string; accent: string; 
   int:       { label: 'Intelligence Login',      sub: 'Sign in to access the screening queue',      accent: '#7c3aed', back: 'linear-gradient(135deg,#7c3aed 0%,#5b21b6 100%)' },
   admin:     { label: 'Admin / Command Login',   sub: 'Sign in to access the approval dashboard',   accent: '#ea580c', back: 'linear-gradient(135deg,#ea580c 0%,#c2410c 100%)' },
   executive: { label: 'Executive / DSS Login',    sub: 'Sign in to access the oversight dashboard',  accent: '#334155', back: 'linear-gradient(135deg,#334155 0%,#1e293b 100%)' },
+  office:    { label: 'Office Registration',      sub: 'Sign in to register or manage a CJTF office', accent: '#0d9488', back: 'linear-gradient(135deg,#0d9488 0%,#0f766e 100%)' },
+}
+
+const ROLE_ACCENT_TEXT: Record<string, string> = {
+  '#008751': '#4ade80',
+  '#09ADE2': '#7dd3fc',
+  '#7c3aed': '#c4b5fd',
+  '#ea580c': '#fdba74',
+  '#334155': '#cbd5e1',
+  '#0d9488': '#5eead4',
 }
 
 export default function LoginPage({
@@ -61,7 +79,10 @@ export default function LoginPage({
   const role = searchParams.role
   const roleConfig = role ? ROLE_LABELS[role] : null
   const next = searchParams.next
-  const registerHref = next ? `/auth/register?next=${encodeURIComponent(next)}` : '/auth/register'
+  const registerParams = new URLSearchParams()
+  if (next) registerParams.set('next', next)
+  if (role === 'office') registerParams.set('role', role)
+  const registerHref = registerParams.size ? `/auth/register?${registerParams}` : '/auth/register'
 
   // ── Role picker ──────────────────────────────────────────────────────────
   if (!roleConfig) {
@@ -97,7 +118,7 @@ export default function LoginPage({
             {ROLES.map((r) => (
               <Link
                 key={r.key}
-                href={`/auth/login?role=${r.key}`}
+                href={next ? `/auth/login?role=${r.key}&next=${encodeURIComponent(next)}` : `/auth/login?role=${r.key}`}
                 className="group bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/30 rounded-2xl p-5 transition-all duration-200 cursor-pointer"
               >
                 <div className="flex items-start gap-4">
@@ -108,7 +129,7 @@ export default function LoginPage({
                     {r.icon}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-white text-base group-hover:underline" style={{ color: r.accent === '#008751' ? '#4ade80' : r.accent === '#09ADE2' ? '#7dd3fc' : r.accent === '#7c3aed' ? '#c4b5fd' : '#fdba74' }}>
+                    <p className="font-bold text-white text-base group-hover:underline" style={{ color: ROLE_ACCENT_TEXT[r.accent] ?? '#fdba74' }}>
                       {r.title}
                     </p>
                     <p className="text-white/50 text-xs mt-1 leading-snug">{r.description}</p>
@@ -120,7 +141,7 @@ export default function LoginPage({
           </div>
 
           <p className="text-white/30 text-xs mt-10">
-            New applicant?{' '}
+            New here?{' '}
             <Link href={registerHref} className="text-white/60 hover:text-white underline">
               Register here
             </Link>
@@ -172,15 +193,15 @@ export default function LoginPage({
               </div>
             )}
 
-            <LoginForm accentColor={roleConfig.accent} next={next} />
+            <LoginForm accentColor={roleConfig.accent} next={next} role={role} />
 
             <p className="text-center text-xs text-gray-400 mt-3">
               <Link href="/auth/forgot-password" className="hover:underline">Forgot password?</Link>
             </p>
 
-            {role === 'applicant' && (
+            {(role === 'applicant' || role === 'office') && (
               <p className="text-center text-sm text-gray-500 mt-4">
-                New applicant?{' '}
+                {role === 'office' ? 'New to office registration?' : 'New applicant?'}{' '}
                 <Link href={registerHref} className="font-medium hover:underline" style={{ color: roleConfig.accent }}>
                   Register here
                 </Link>

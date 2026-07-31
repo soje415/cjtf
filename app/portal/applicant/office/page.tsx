@@ -12,7 +12,7 @@ export default async function OfficePage() {
   const service = createServiceClient()
   const { data: { session } } = await supabase.auth.getSession()
   const user = session?.user
-  if (!user) redirect('/auth/login?next=/portal/applicant/office')
+  if (!user) redirect('/auth/login?role=office&next=/portal/applicant/office')
 
   const { data: reg } = await service
     .from('office_registrations')

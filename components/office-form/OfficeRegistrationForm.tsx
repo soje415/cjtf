@@ -101,35 +101,48 @@ export default function OfficeRegistrationForm({
     }
   }
 
-  async function saveProgress(fields: Partial<FormState>) {
+  async function saveProgress(fields: Partial<FormState>): Promise<boolean> {
     setSaving(true)
     const merged = { ...form, ...fields }
     setForm(merged)
+    let ok = false
     try {
       let id = regId
       if (!id) id = await ensureRegId()
       if (id) {
-        await fetch(`/api/office/${id}`, {
+        const res = await fetch(`/api/office/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(merged),
         })
+        ok = res.ok
+        if (!ok) {
+          const json = await res.json().catch(() => ({}))
+          toast.error(json.error ?? 'Failed to save progress.')
+        }
       }
     } catch {
       toast.error('Failed to save progress. Check your connection.')
     }
     setSaving(false)
+    return ok
   }
 
   async function handleSubmit() {
     if (!regId) return
     setSaving(true)
     try {
-      await fetch(`/api/office/${regId}`, {
+      const patchRes = await fetch(`/api/office/${regId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       })
+      if (!patchRes.ok) {
+        const patchJson = await patchRes.json().catch(() => ({}))
+        toast.error(patchJson.error ?? 'Failed to save your details before submitting.')
+        setSaving(false)
+        return
+      }
       const res = await fetch(`/api/office/${regId}`, { method: 'POST' })
       const json = await res.json()
       if (!res.ok) {
@@ -162,15 +175,15 @@ export default function OfficeRegistrationForm({
 
       {step === 0 && (
         <StepRegistrant form={form} update={update} saving={saving} ensureRegId={ensureRegId} saveProgress={saveProgress}
-          onNext={async () => { await saveProgress({}); setStep(1) }} />
+          onNext={async () => { if (await saveProgress({})) setStep(1) }} />
       )}
       {step === 1 && (
         <StepOffice form={form} update={update} saving={saving} localities={localities}
-          onBack={() => setStep(0)} onNext={async () => { await saveProgress({}); setStep(2) }} />
+          onBack={() => setStep(0)} onNext={async () => { if (await saveProgress({})) setStep(2) }} />
       )}
       {step === 2 && (
         <StepPhotos form={form} update={update} saving={saving} ensureRegId={ensureRegId}
-          onBack={() => setStep(1)} onNext={async () => { await saveProgress({}); setStep(3) }} />
+          onBack={() => setStep(1)} onNext={async () => { if (await saveProgress({})) setStep(3) }} />
       )}
       {step === 3 && (
         <StepReview form={form} saving={saving} onBack={() => setStep(2)} onSubmit={handleSubmit} />
@@ -182,7 +195,7 @@ export default function OfficeRegistrationForm({
 // ── Step 0: registrant + identity verification ──
 function StepRegistrant({ form, update, saving, ensureRegId, saveProgress, onNext }: {
   form: FormState; update: (f: Partial<FormState>) => void; saving: boolean
-  ensureRegId: () => Promise<string | null>; saveProgress: (f: Partial<FormState>) => Promise<void>; onNext: () => void
+  ensureRegId: () => Promise<string | null>; saveProgress: (f: Partial<FormState>) => Promise<boolean>; onNext: () => void
 }) {
   const [method, setMethod] = useState<'nin' | 'bvn'>((form.identity_verify_method as 'nin' | 'bvn') || 'nin')
   const [number, setNumber] = useState(form.identity_verify_method === 'bvn' ? form.bvn : form.nin)

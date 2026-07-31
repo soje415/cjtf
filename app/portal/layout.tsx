@@ -28,9 +28,23 @@ export default async function PortalLayout({ children }: { children: React.React
 
   if (!activeProfile) redirect('/auth/login')
 
+  // Office registrants and recruitment applicants share the same
+  // `applicant` role, but need different nav links — figure out which
+  // flow(s) this user actually has a registration in.
+  let hasOfficeReg = false
+  let hasApplication = false
+  if (activeProfile.role === 'applicant') {
+    const [{ data: officeReg }, { data: application }] = await Promise.all([
+      service.from('office_registrations').select('id').eq('registrant_id', session.user.id).limit(1).maybeSingle(),
+      service.from('applications').select('id').eq('applicant_id', session.user.id).limit(1).maybeSingle(),
+    ])
+    hasOfficeReg = !!officeReg
+    hasApplication = !!application
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <PortalNav profile={activeProfile} />
+      <PortalNav profile={activeProfile} hasOfficeReg={hasOfficeReg} hasApplication={hasApplication} />
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
         {children}
       </main>

@@ -52,6 +52,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   for (const key of allowed) {
     if (key in body) updates[key] = body[key]
   }
+  // date_of_birth is a `date` column and gender has a CHECK ('male'|'female')
+  // constraint — the form sends '' by default for both, which Postgres
+  // rejects outright instead of silently ignoring.
+  if (updates.date_of_birth === '') updates.date_of_birth = null
+  if (updates.gender === '') updates.gender = null
 
   const { data, error } = await service
     .from('office_registrations')

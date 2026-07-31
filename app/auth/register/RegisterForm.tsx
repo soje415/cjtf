@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-export default function RegisterForm({ next }: { next?: string }) {
+export default function RegisterForm({ next, role, submitLabel = 'Register & Apply' }: { next?: string; role?: string; submitLabel?: string }) {
   const [loading, setLoading] = useState(false)
 
   return (
@@ -13,6 +13,7 @@ export default function RegisterForm({ next }: { next?: string }) {
       className="space-y-3"
     >
       {next && <input type="hidden" name="next" value={next} />}
+      {role && <input type="hidden" name="role" value={role} />}
       <div className="space-y-1">
         <label htmlFor="fullName" className="text-sm font-medium text-gray-700">Full Name</label>
         <input id="fullName" name="fullName" type="text" required placeholder="John Doe"
@@ -43,7 +44,7 @@ export default function RegisterForm({ next }: { next?: string }) {
         disabled={loading}
         className="w-full bg-cjtf-blue hover:bg-cjtf-blue-dark disabled:opacity-60 text-white font-semibold py-2 px-4 rounded-lg text-sm transition-colors"
       >
-        {loading ? 'Creating account…' : 'Register & Apply'}
+        {loading ? 'Creating account…' : submitLabel}
       </button>
     </form>
   )
