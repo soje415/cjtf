@@ -34,6 +34,8 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/paystack/webhook') ||
     pathname.startsWith('/api/hyparrow/webhook') ||
+    // Public ID lookup used by the search box on the website (cross-origin).
+    pathname.startsWith('/api/verify') ||
     pathname.startsWith('/verify') ||
     pathname === '/' ||
     pathname.startsWith('/about')

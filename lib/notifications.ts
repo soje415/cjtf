@@ -1,19 +1,16 @@
 import type { createServiceClient } from '@/lib/supabase/server'
 import { sendSms } from '@/lib/termii'
+import { REGISTRATION_FEE_KOBO, OFFICE_FEE_KOBO } from '@/lib/fees'
 
 type ServiceClient = ReturnType<typeof createServiceClient>
 
-const ID_CARD_FEE = Number(process.env.NEXT_PUBLIC_ID_CARD_FEE_KOBO ?? 25000)
-const TRAINING_FEE = Number(process.env.NEXT_PUBLIC_TRAINING_FEE_KOBO ?? 25000)
-const OFFICE_FEE = Number(process.env.NEXT_PUBLIC_OFFICE_FEE_KOBO ?? 5000000)
-
 /**
  * Apply a bank-transfer credit received on an applicant's Hyparrow virtual
- * account. A single transfer that covers the combined fee total clears BOTH the
- * ID card and training fees at once. Idempotent: payment rows key off the
- * Hyparrow transaction reference (UNIQUE on payments.paystack_reference), so a
- * replayed webhook is a no-op. On full payment it calls notifyPaymentComplete()
- * which atomically advances the application to ICT verification.
+ * account. A transfer covering the registration fee clears it. Idempotent:
+ * payment rows key off the Hyparrow transaction reference (UNIQUE on
+ * payments.paystack_reference), so a replayed webhook is a no-op. On full
+ * payment it calls notifyPaymentComplete() which atomically advances the
+ * application to ICT verification.
  *
  * Returns { credited, advanced }.
  */
@@ -22,41 +19,27 @@ export async function creditVirtualAccountPayment(
   params: { application: { id: string; applicant_id: string }; amountKobo: number; reference: string }
 ): Promise<{ credited: boolean; advanced: boolean }> {
   const { application, amountKobo, reference } = params
-  const expectedTotal = ID_CARD_FEE + TRAINING_FEE
 
-  // Underpayment: don't clear the fees. The persistent VA can receive a top-up later.
-  if (amountKobo < expectedTotal) {
+  // Underpayment: don't clear the fee. The persistent VA can receive a top-up later.
+  if (amountKobo < REGISTRATION_FEE_KOBO) {
     return { credited: false, advanced: false }
   }
 
-  // Tick both fees. ON CONFLICT DO NOTHING on the unique reference makes a
-  // replayed webhook idempotent.
-  const now = new Date().toISOString()
-  await service
-    .from('payments')
-    .upsert(
-      [
-        {
-          application_id: application.id,
-          applicant_id: application.applicant_id,
-          type: 'id_card',
-          amount: ID_CARD_FEE,
-          paystack_reference: `HYP-${reference}-IDCARD`,
-          status: 'success',
-          paid_at: now,
-        },
-        {
-          application_id: application.id,
-          applicant_id: application.applicant_id,
-          type: 'training',
-          amount: TRAINING_FEE,
-          paystack_reference: `HYP-${reference}-TRAINING`,
-          status: 'success',
-          paid_at: now,
-        },
-      ],
-      { onConflict: 'paystack_reference', ignoreDuplicates: true }
-    )
+  // ON CONFLICT DO NOTHING on the unique reference makes a replayed webhook idempotent.
+  await service.from('payments').upsert(
+    [
+      {
+        application_id: application.id,
+        applicant_id: application.applicant_id,
+        type: 'registration',
+        amount: REGISTRATION_FEE_KOBO,
+        paystack_reference: `HYP-${reference}-REGISTRATION`,
+        status: 'success',
+        paid_at: new Date().toISOString(),
+      },
+    ],
+    { onConflict: 'paystack_reference', ignoreDuplicates: true }
+  )
 
   const advanced = await notifyPaymentComplete(service, application.id)
   return { credited: true, advanced }
@@ -77,7 +60,7 @@ export async function creditOfficeRegistrationPayment(
 ): Promise<{ credited: boolean; advanced: boolean }> {
   const { registration, amountKobo, reference } = params
 
-  if (amountKobo < OFFICE_FEE) {
+  if (amountKobo < OFFICE_FEE_KOBO) {
     return { credited: false, advanced: false }
   }
 
@@ -89,7 +72,7 @@ export async function creditOfficeRegistrationPayment(
         office_registration_id: registration.id,
         applicant_id: registration.registrant_id,
         type: 'office',
-        amount: OFFICE_FEE,
+        amount: OFFICE_FEE_KOBO,
         paystack_reference: `HYP-${reference}-OFFICE`,
         status: 'success',
         paid_at: now,

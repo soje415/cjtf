@@ -1,18 +1,20 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { creditVirtualAccountPayment } from '@/lib/notifications'
+import { REGISTRATION_FEE_KOBO, paymentBypassEnabled } from '@/lib/fees'
 
-const ID_CARD_FEE = Number(process.env.NEXT_PUBLIC_ID_CARD_FEE_KOBO ?? 25000)
-const TRAINING_FEE = Number(process.env.NEXT_PUBLIC_TRAINING_FEE_KOBO ?? 25000)
 
 /**
- * DEV ONLY. Simulates a virtual-account credit for the signed-in applicant so we
- * can exercise the full payment flow (clear both fees → advance to ICT → SMS)
- * without moving real money. Hard-disabled in production. Bypasses the Hyparrow
- * signature + transaction lookup by calling the shared credit logic directly.
+ * Simulates a virtual-account credit for the signed-in applicant so the full
+ * payment flow (clear the fee → advance to ICT → SMS) can be exercised without
+ * moving real money. Bypasses the Hyparrow signature + transaction lookup by
+ * calling the shared credit logic directly.
+ *
+ * Gated on NEXT_PUBLIC_ALLOW_PAYMENT_BYPASS so it can be used against the
+ * deployed site while Hyparrow is being tested — see paymentBypassEnabled().
  */
 export async function POST() {
-  if (process.env.NODE_ENV === 'production') {
+  if (!paymentBypassEnabled()) {
     return NextResponse.json({ error: 'Not available' }, { status: 404 })
   }
 
@@ -33,7 +35,7 @@ export async function POST() {
 
   const result = await creditVirtualAccountPayment(service, {
     application: { id: app.id, applicant_id: app.applicant_id },
-    amountKobo: ID_CARD_FEE + TRAINING_FEE,
+    amountKobo: REGISTRATION_FEE_KOBO,
     reference: `SIM-${Date.now()}`,
   })
 

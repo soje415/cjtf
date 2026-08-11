@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { creditOfficeRegistrationPayment } from '@/lib/notifications'
+import { OFFICE_FEE_KOBO, paymentBypassEnabled } from '@/lib/fees'
 
-const OFFICE_FEE = Number(process.env.NEXT_PUBLIC_OFFICE_FEE_KOBO ?? 5000000)
 
 /**
- * DEV ONLY. Simulates a virtual-account credit for an office registration so the
- * full flow can be exercised without real money (live VA issuance is currently
- * blocked vendor-side). Hard-disabled in production. Calls the shared credit
- * logic directly, bypassing the Hyparrow signature + transaction lookup.
+ * Simulates a virtual-account credit for an office registration so the full flow
+ * can be exercised without real money. Calls the shared credit logic directly,
+ * bypassing the Hyparrow signature + transaction lookup.
+ *
+ * Gated on NEXT_PUBLIC_ALLOW_PAYMENT_BYPASS so it can be used against the
+ * deployed site while Hyparrow is being tested — see paymentBypassEnabled().
  */
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
-  if (process.env.NODE_ENV === 'production') {
+  if (!paymentBypassEnabled()) {
     return NextResponse.json({ error: 'Not available' }, { status: 404 })
   }
 
@@ -32,7 +34,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
 
   const result = await creditOfficeRegistrationPayment(service, {
     registration: { id: reg.id, registrant_id: reg.registrant_id },
-    amountKobo: OFFICE_FEE,
+    amountKobo: OFFICE_FEE_KOBO,
     reference: `SIM-${Date.now()}`,
   })
 

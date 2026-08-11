@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { verifyWebhookSignature, verifyTransaction } from '@/lib/paystack'
 import { notifyPaymentComplete } from '@/lib/notifications'
+import { isApplicationPaid } from '@/lib/fees'
 
 export async function POST(req: Request) {
   const payload = await req.text()
@@ -40,7 +41,7 @@ export async function POST(req: Request) {
     paid_at: new Date().toISOString(),
   }).eq('id', payment.id)
 
-  // Check if both payments are now successful
+  // Check whether the application is now paid in full
   const { data: allPayments } = await service
     .from('payments')
     .select('type, status')
@@ -48,9 +49,8 @@ export async function POST(req: Request) {
     .eq('status', 'success')
 
   const types = allPayments?.map((p) => p.type) ?? []
-  const bothPaid = types.includes('id_card') && types.includes('training')
 
-  if (bothPaid) {
+  if (isApplicationPaid(types)) {
     await notifyPaymentComplete(service, payment.application_id)
   }
 

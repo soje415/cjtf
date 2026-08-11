@@ -11,7 +11,8 @@ export type ApplicationStatus =
   | 'COMPLETED'
   | 'REJECTED'
 
-export type PaymentType = 'id_card' | 'training'
+// 'id_card' and 'training' are legacy: applicants now pay one 'registration' fee.
+export type PaymentType = 'registration' | 'office' | 'id_card' | 'training'
 export type PaymentStatus = 'pending' | 'success' | 'failed'
 
 export type NoteAction =

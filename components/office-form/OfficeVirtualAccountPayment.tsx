@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
+import { paymentBypassEnabled, formatNaira } from '@/lib/fees'
 
 interface Props {
   registrationId: string
@@ -26,7 +27,7 @@ export default function OfficeVirtualAccountPayment({ registrationId, name, offi
   const [error, setError] = useState<string | null>(null)
   const [paid, setPaid] = useState(false)
   const [simulating, setSimulating] = useState(false)
-  const isDev = process.env.NODE_ENV !== 'production'
+  const bypassEnabled = paymentBypassEnabled()
 
   const fetchAccount = useCallback(async (): Promise<boolean> => {
     const res = await fetch(`/api/office/${registrationId}/account`, { method: 'POST' })
@@ -135,7 +136,7 @@ export default function OfficeVirtualAccountPayment({ registrationId, name, offi
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm text-gray-500">Amount</p>
-              <p className="text-3xl font-bold text-cjtf-green">₦{(account.amount / 100).toLocaleString()}</p>
+              <p className="text-3xl font-bold text-cjtf-green">{formatNaira(account.amount)}</p>
               <p className="text-xs text-gray-400">Office registration fee.</p>
             </div>
             <div className="rounded-lg border bg-gray-50 p-4 space-y-2">
@@ -156,10 +157,18 @@ export default function OfficeVirtualAccountPayment({ registrationId, name, offi
         </Card>
       )}
 
-      {isDev && (
-        <Button onClick={simulate} disabled={simulating} variant="outline" className="w-full border-dashed">
-          {simulating ? 'Simulating…' : '🧪 Simulate payment (dev only)'}
-        </Button>
+      {/* Testing bypass — see NEXT_PUBLIC_ALLOW_PAYMENT_BYPASS in lib/fees.ts. */}
+      {bypassEnabled && (
+        <div className="rounded-lg border border-dashed border-amber-400 bg-amber-50 p-4 space-y-2">
+          <p className="text-xs font-semibold text-amber-800">Testing bypass</p>
+          <p className="text-xs text-amber-700">
+            Marks this office registration as paid without a real transfer, so the rest of the flow
+            can be tested. Remove before taking real payments.
+          </p>
+          <Button onClick={simulate} disabled={simulating} variant="outline" className="w-full border-dashed">
+            {simulating ? 'Simulating…' : '🧪 Skip payment (testing)'}
+          </Button>
+        </div>
       )}
     </div>
   )

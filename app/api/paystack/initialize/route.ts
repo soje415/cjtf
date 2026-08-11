@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { initializeTransaction } from '@/lib/paystack'
+import { REGISTRATION_FEE_KOBO } from '@/lib/fees'
 import { randomBytes } from 'crypto'
 function nanoid(len: number) { return randomBytes(len).toString('hex').slice(0, len).toUpperCase() }
 
@@ -10,10 +11,13 @@ export async function POST(req: Request) {
   const user = _session?.user
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { applicationId, type } = await req.json()
-  if (!applicationId || !['id_card', 'training'].includes(type)) {
+  const { applicationId } = await req.json()
+  if (!applicationId) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
   }
+  // Applicants pay one combined registration fee; the old id_card/training split
+  // is no longer initiable, only readable on historical rows.
+  const type = 'registration'
 
   // Verify the application belongs to this user and is in PENDING_PAYMENT
   const service = createServiceClient()
@@ -39,9 +43,7 @@ export async function POST(req: Request) {
 
   if (existing) return NextResponse.json({ error: 'Already paid' }, { status: 400 })
 
-  const amount = type === 'id_card'
-    ? Number(process.env.NEXT_PUBLIC_ID_CARD_FEE_KOBO ?? 500000)
-    : Number(process.env.NEXT_PUBLIC_TRAINING_FEE_KOBO ?? 1000000)
+  const amount = REGISTRATION_FEE_KOBO
 
   const reference = `CJTF-${type.toUpperCase()}-${nanoid(10).toUpperCase()}`
 

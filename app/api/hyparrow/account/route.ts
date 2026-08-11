@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { createCustomer, createVirtualAccount, findCustomer, type VirtualAccount } from '@/lib/hyparrow-pay'
+import { REGISTRATION_FEE_KOBO } from '@/lib/fees'
 
-const ID_CARD_FEE = Number(process.env.NEXT_PUBLIC_ID_CARD_FEE_KOBO ?? 25000)
-const TRAINING_FEE = Number(process.env.NEXT_PUBLIC_TRAINING_FEE_KOBO ?? 25000)
 // Hyparrow expects a provider NAME here, not a numeric CBN/NIP code. Passing a
 // numeric code surfaces as "interswitch VA creation failed". Use WEMA (default).
 const BANK_CODE = process.env.HYPARROW_VA_BANK_CODE || 'WEMA'
@@ -29,7 +28,7 @@ export async function POST() {
 
   if (!app) return NextResponse.json({ error: 'No application found' }, { status: 404 })
 
-  const amount = ID_CARD_FEE + TRAINING_FEE
+  const amount = REGISTRATION_FEE_KOBO
 
   // Once payment has been received the application leaves PENDING_PAYMENT.
   const paid = app.status !== 'PENDING_PAYMENT'

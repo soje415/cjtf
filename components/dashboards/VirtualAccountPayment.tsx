@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
+import { paymentBypassEnabled, formatNaira } from '@/lib/fees'
 
 interface Props {
   applicationId: string
@@ -25,7 +26,7 @@ export default function VirtualAccountPayment({ name }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [paid, setPaid] = useState(false)
   const [simulating, setSimulating] = useState(false)
-  const isDev = process.env.NODE_ENV !== 'production'
+  const bypassEnabled = paymentBypassEnabled()
 
   // Fetch (or create) the virtual account, and report whether it's been paid.
   const fetchAccount = useCallback(async (): Promise<boolean> => {
@@ -116,8 +117,8 @@ export default function VirtualAccountPayment({ name }: Props) {
       <div>
         <h1 className="text-2xl font-bold text-gray-800">Application Fee Payment</h1>
         <p className="text-gray-500 text-sm mt-1">
-          Transfer the exact amount below to your personal account number. Your ID card and training
-          fees are cleared together, and your application advances automatically once we receive it.
+          Transfer the exact amount below to your personal account number. Your application
+          advances automatically once we receive it.
         </p>
       </div>
 
@@ -145,8 +146,8 @@ export default function VirtualAccountPayment({ name }: Props) {
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm text-gray-500">Amount</p>
-              <p className="text-3xl font-bold text-cjtf-green">₦{(account.amount / 100).toLocaleString()}</p>
-              <p className="text-xs text-gray-400">Covers both the ID card and training fees.</p>
+              <p className="text-3xl font-bold text-cjtf-green">{formatNaira(account.amount)}</p>
+              <p className="text-xs text-gray-400">One-off CJTF registration fee.</p>
             </div>
 
             <div className="rounded-lg border bg-gray-50 p-4 space-y-2">
@@ -176,12 +177,21 @@ export default function VirtualAccountPayment({ name }: Props) {
         </Card>
       )}
 
-      {/* Dev-only: complete the flow without a real transfer (and even if live VA
-          creation isn't wired up yet). Hidden in production. */}
-      {isDev && (
-        <Button onClick={simulate} disabled={simulating} variant="outline" className="w-full border-dashed">
-          {simulating ? 'Simulating…' : '🧪 Simulate payment (dev only)'}
-        </Button>
+      {/* Testing bypass: completes the flow without a real transfer, for use while
+          Hyparrow is being verified end to end. Shown only when
+          NEXT_PUBLIC_ALLOW_PAYMENT_BYPASS=true — unset it once live payments are
+          confirmed, or anyone can advance their own application without paying. */}
+      {bypassEnabled && (
+        <div className="rounded-lg border border-dashed border-amber-400 bg-amber-50 p-4 space-y-2">
+          <p className="text-xs font-semibold text-amber-800">Testing bypass</p>
+          <p className="text-xs text-amber-700">
+            Marks this application as paid without a real transfer, so the rest of the flow can be
+            tested. Remove before taking real payments.
+          </p>
+          <Button onClick={simulate} disabled={simulating} variant="outline" className="w-full border-dashed">
+            {simulating ? 'Simulating…' : '🧪 Skip payment (testing)'}
+          </Button>
+        </div>
       )}
     </div>
   )
