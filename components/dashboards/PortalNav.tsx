@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname } from 'next/navigation'
 import { Profile, Role } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
@@ -50,8 +49,6 @@ export default function PortalNav({
   hasOfficeReg?: boolean
   hasApplication?: boolean
 }) {
-  const pathname = usePathname()
-
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
     toast.success('Signed out')
@@ -61,16 +58,16 @@ export default function PortalNav({
   let links: { label: string; href: string }[]
   if (profile.role === 'applicant') {
     // Office registrants and recruitment applicants share the `applicant`
-    // role — pick nav links based on which flow(s) they're actually in,
-    // falling back to "currently browsing an office page" for the moment
-    // right after signup, before any DB row exists yet.
-    const inOfficeFlow = hasOfficeReg
-      || pathname.startsWith('/portal/applicant/office')
-      || pathname.startsWith('/portal/applicant/certificate')
-    const inRecruitmentFlow = hasApplication || !inOfficeFlow
+    // role — a profile only "commits" to one flow once it has a row in
+    // that flow's table. Until then (fresh signup, or an account that's
+    // never touched either flow), show both nav options rather than
+    // guessing — otherwise a fresh account landing on the recruitment
+    // dashboard has no way to reach office registration at all.
+    const showOffice = hasOfficeReg || !hasApplication
+    const showRecruitment = hasApplication || !hasOfficeReg
     links = [
-      ...(inRecruitmentFlow ? RECRUITMENT_LINKS : []),
-      ...(inOfficeFlow ? OFFICE_LINKS : []),
+      ...(showRecruitment ? RECRUITMENT_LINKS : []),
+      ...(showOffice ? OFFICE_LINKS : []),
     ]
   } else {
     links = NAV_LINKS[profile.role] || []

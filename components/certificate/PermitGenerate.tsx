@@ -103,6 +103,10 @@ export default function PermitGenerate({
                   className="border-cjtf-green text-cjtf-green hover:bg-cjtf-green hover:text-white">
                   Open &amp; Print
                 </Button>
+                <Button variant="outline" onClick={generate} disabled={busy}
+                  className="border-gray-300 text-gray-600 hover:bg-gray-100">
+                  {busy ? 'Regenerating…' : 'Regenerate PDF'}
+                </Button>
               </>
             )}
           </div>
@@ -114,11 +118,10 @@ export default function PermitGenerate({
         </CardContent>
       </Card>
 
-      {/* Live permit preview (also the capture source) */}
+      {/* Live permit preview (display only — scaled down for a compact view) */}
       <div className="overflow-x-auto">
         <div style={{ transform: 'scale(0.62)', transformOrigin: 'top left', width: 1123 * 0.62, height: 794 * 0.62 }}>
           <OperationalPermit
-            ref={cardRef}
             fullName={fullName}
             officeAddress={officeAddress}
             officeName={officeName}
@@ -127,6 +130,24 @@ export default function PermitGenerate({
             qrDataUrl={qrDataUrl}
           />
         </div>
+      </div>
+
+      {/* Hidden, unscaled capture source. html2canvas manually re-implements
+          text layout by walking the DOM — a scaled ancestor (the preview
+          above) throws off its glyph positioning and produces scrambled
+          text in the exported PDF, even though the scaled preview looks
+          fine natively in the browser. Capturing from an untransformed
+          clone avoids that entirely. */}
+      <div style={{ position: 'fixed', top: 0, left: -99999, pointerEvents: 'none' }} aria-hidden>
+        <OperationalPermit
+          ref={cardRef}
+          fullName={fullName}
+          officeAddress={officeAddress}
+          officeName={officeName}
+          permitNumber={certNumber ?? '—'}
+          dateIssued={dateIssued}
+          qrDataUrl={qrDataUrl}
+        />
       </div>
     </div>
   )

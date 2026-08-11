@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { creditOfficeRegistrationPayment } from '@/lib/notifications'
 
-const OFFICE_FEE = Number(process.env.NEXT_PUBLIC_OFFICE_FEE_KOBO ?? 50000)
+const OFFICE_FEE = Number(process.env.NEXT_PUBLIC_OFFICE_FEE_KOBO ?? 5000000)
 
 /**
  * DEV ONLY. Simulates a virtual-account credit for an office registration so the

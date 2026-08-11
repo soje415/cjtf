@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { createCustomer, createVirtualAccount } from '@/lib/hyparrow-pay'
 
-const OFFICE_FEE = Number(process.env.NEXT_PUBLIC_OFFICE_FEE_KOBO ?? 50000)
+const OFFICE_FEE = Number(process.env.NEXT_PUBLIC_OFFICE_FEE_KOBO ?? 5000000)
 // Hyparrow expects a provider NAME here, not a numeric CBN/NIP code. Passing a
 // numeric code surfaces as "interswitch VA creation failed". Use WEMA (default).
 const BANK_CODE = process.env.HYPARROW_VA_BANK_CODE || 'WEMA'

@@ -115,8 +115,12 @@ const OperationalPermit = forwardRef<HTMLDivElement, PermitProps>(function Opera
             width: 96, height: 96, borderRadius: '50%',
             background: `radial-gradient(circle at 50% 40%, #e8c75e, ${GOLD})`,
             border: `3px solid #9c7d1e`, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#5b4708', fontWeight: 800, fontSize: 22, boxShadow: 'inset 0 0 8px rgba(0,0,0,0.25)',
-          }}>CJTF</div>
+            boxShadow: 'inset 0 0 8px rgba(0,0,0,0.25)', overflow: 'hidden',
+          }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/cjtf-logo.jpg" alt="CJTF Seal" crossOrigin="anonymous"
+              style={{ width: 74, height: 74, objectFit: 'contain', borderRadius: '50%' }} />
+          </div>
 
           {/* QR verification */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>

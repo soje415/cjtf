@@ -5,7 +5,7 @@ type ServiceClient = ReturnType<typeof createServiceClient>
 
 const ID_CARD_FEE = Number(process.env.NEXT_PUBLIC_ID_CARD_FEE_KOBO ?? 25000)
 const TRAINING_FEE = Number(process.env.NEXT_PUBLIC_TRAINING_FEE_KOBO ?? 25000)
-const OFFICE_FEE = Number(process.env.NEXT_PUBLIC_OFFICE_FEE_KOBO ?? 50000)
+const OFFICE_FEE = Number(process.env.NEXT_PUBLIC_OFFICE_FEE_KOBO ?? 5000000)
 
 /**
  * Apply a bank-transfer credit received on an applicant's Hyparrow virtual
