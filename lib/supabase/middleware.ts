@@ -37,6 +37,7 @@ export async function updateSession(request: NextRequest) {
     // Public ID lookup used by the search box on the website (cross-origin).
     pathname.startsWith('/api/verify') ||
     pathname.startsWith('/verify') ||
+    pathname.startsWith('/card-preview') ||
     pathname === '/' ||
     pathname.startsWith('/about')
   ) {

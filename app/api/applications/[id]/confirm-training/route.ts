@@ -24,11 +24,20 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: 'Invalid application state' }, { status: 400 })
   }
 
-  await service.from('applications').update({
-    status: 'APPROVED_GENERATING_ID',
-    trained_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  }).eq('id', params.id)
+  // Conditional on the prior status so a double submit can't fire twice.
+  const { data: moved } = await service
+    .from('applications')
+    .update({
+      status: 'APPROVED_GENERATING_ID',
+      trained_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', params.id)
+    .eq('status', 'PENDING_TRAINING')
+    .select('id')
+    .maybeSingle()
+
+  if (!moved) return NextResponse.json({ ok: true, alreadyProcessed: true })
 
   await service.from('application_notes').insert({
     application_id: params.id,

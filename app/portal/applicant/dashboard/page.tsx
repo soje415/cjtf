@@ -5,8 +5,14 @@ import { Badge } from '@/components/ui/badge'
 import { LinkButton } from '@/components/ui/link-button'
 import { ApplicationStatus, STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
 
+// Every non-terminal status an application can sit in, in order. A status
+// missing from this list falls through getStepIndex() to 0, which renders the
+// applicant as if they were still on step one — PENDING_PAYMENT used to be
+// absent, so anyone who had submitted and owed the fee was shown "Fill
+// Application" as their current step, reading as though their submission was lost.
 const STEPS: { status: ApplicationStatus; label: string }[] = [
   { status: 'DRAFT', label: 'Fill Application' },
+  { status: 'PENDING_PAYMENT', label: 'Pay Registration Fee' },
   { status: 'PENDING_ICT_VERIFICATION', label: 'ICT Verification' },
   { status: 'PENDING_INT_SCREENING', label: 'Intelligence Screening' },
   { status: 'PENDING_ADMIN_APPROVAL', label: 'Admin Approval' },
@@ -136,6 +142,11 @@ export default async function ApplicantDashboard() {
           {app.status === 'DRAFT' && (
             <LinkButton href="/portal/applicant/application" className="bg-cjtf-green hover:bg-cjtf-green-dark">
               Continue Application
+            </LinkButton>
+          )}
+          {app.status === 'PENDING_PAYMENT' && (
+            <LinkButton href="/portal/applicant/payment" className="bg-cjtf-gold text-cjtf-green hover:bg-cjtf-gold-dark">
+              Pay Registration Fee
             </LinkButton>
           )}
 {app.status === 'COMPLETED' && (

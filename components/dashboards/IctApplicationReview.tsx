@@ -216,7 +216,13 @@ export default function IctApplicationReview({ application, payments, notes }: P
           <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Generated ID Card — Back</p>
           <div className="flex justify-center">
             <div ref={backRef}>
-              <IdCardBackPreview cjtfId={generated.cjtfId} />
+              <IdCardBackPreview
+                cjtfId={generated.cjtfId}
+                fullName={fullName}
+                designation="VOLUNTEER MEMBER"
+                bloodGroup={application.blood_group ?? undefined}
+                issueDate={issueDate}
+              />
             </div>
           </div>
         </div>

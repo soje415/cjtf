@@ -25,11 +25,22 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     .eq('id', params.id)
     .single()
 
-  await service.from('applications').update({
-    status: 'PENDING_INT_SCREENING',
-    ict_verified_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  }).eq('id', params.id)
+  // Guard the write on the status we validated above, not just the id. Without
+  // it, two quick clicks both pass the check and both write, duplicating the
+  // audit note and firing a second SMS blast to every INT officer.
+  const { data: moved } = await service
+    .from('applications')
+    .update({
+      status: 'PENDING_INT_SCREENING',
+      ict_verified_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', params.id)
+    .eq('status', 'PENDING_ICT_VERIFICATION')
+    .select('id')
+    .maybeSingle()
+
+  if (!moved) return NextResponse.json({ ok: true, alreadyProcessed: true })
 
   if (note?.trim()) {
     await service.from('application_notes').insert({

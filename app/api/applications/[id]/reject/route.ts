@@ -26,13 +26,23 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: 'Invalid application state' }, { status: 400 })
   }
 
-  await service.from('applications').update({
-    status: 'REJECTED',
-    rejected_by_role: profile?.role,
-    rejected_at: new Date().toISOString(),
-    rejection_reason: note.trim(),
-    updated_at: new Date().toISOString(),
-  }).eq('id', params.id)
+  // Conditional on the status this role is allowed to reject from, so a double
+  // submit can't duplicate the rejection note or the applicant's SMS.
+  const { data: moved } = await service
+    .from('applications')
+    .update({
+      status: 'REJECTED',
+      rejected_by_role: profile?.role,
+      rejected_at: new Date().toISOString(),
+      rejection_reason: note.trim(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', params.id)
+    .in('status', validStatuses)
+    .select('id')
+    .maybeSingle()
+
+  if (!moved) return NextResponse.json({ ok: true, alreadyProcessed: true })
 
   await service.from('application_notes').insert({
     application_id: params.id,

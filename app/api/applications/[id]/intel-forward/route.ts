@@ -26,11 +26,20 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     .eq('id', params.id)
     .single()
 
-  await service.from('applications').update({
-    status: 'PENDING_ADMIN_APPROVAL',
-    int_cleared_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  }).eq('id', params.id)
+  // Conditional on the prior status so a double submit can't fire twice.
+  const { data: moved } = await service
+    .from('applications')
+    .update({
+      status: 'PENDING_ADMIN_APPROVAL',
+      int_cleared_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', params.id)
+    .eq('status', 'PENDING_INT_SCREENING')
+    .select('id')
+    .maybeSingle()
+
+  if (!moved) return NextResponse.json({ ok: true, alreadyProcessed: true })
 
   await service.from('application_notes').insert({
     application_id: params.id,

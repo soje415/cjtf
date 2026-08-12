@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { officeChecksRelaxed } from '@/lib/pilot'
 
 const STEP_TITLES = ['Registrant & Identity', 'Office Details', 'Photos & Endorsement', 'Review & Submit']
 const TITLES = ['Mr', 'Mrs', 'Miss', 'Ms', 'Dr', 'Alhaji', 'Hajia', 'Chief']
@@ -455,6 +456,9 @@ function StepPhotos({ form, update, saving, ensureRegId, onBack, onNext }: {
   }
 
   const photosDone = form.office_photo_urls.length > 0
+  // Pilot: the photo stops blocking the step, matching the server-side gate in
+  // app/api/office/[id]/route.ts. See lib/pilot.ts.
+  const photosRelaxed = officeChecksRelaxed()
 
   return (
     <Card>
@@ -493,12 +497,16 @@ function StepPhotos({ form, update, saving, ensureRegId, onBack, onNext }: {
         </div>
 
         {!photosDone && (
-          <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">Upload at least one photo of the office space to continue.</p>
+          <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+            {photosRelaxed
+              ? 'No office photo uploaded. You can continue for now, but INT screening may ask for one.'
+              : 'Upload at least one photo of the office space to continue.'}
+          </p>
         )}
 
         <div className="flex justify-between pt-2">
           <Button variant="outline" onClick={onBack}>← Back</Button>
-          <Button onClick={onNext} disabled={!photosDone || uploadingPhoto || uploadingDoc || saving} className="bg-cjtf-green hover:bg-cjtf-green-dark">
+          <Button onClick={onNext} disabled={(!photosDone && !photosRelaxed) || uploadingPhoto || uploadingDoc || saving} className="bg-cjtf-green hover:bg-cjtf-green-dark">
             {saving ? 'Saving…' : 'Next Step →'}
           </Button>
         </div>

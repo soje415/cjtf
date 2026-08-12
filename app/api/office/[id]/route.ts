@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { sendSms } from '@/lib/termii'
+import { officeChecksRelaxed, describeSkippedOfficeChecks } from '@/lib/pilot'
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -104,16 +105,34 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   for (const [field, value] of required) {
     if (!value) return NextResponse.json({ error: `Missing required field: ${field}` }, { status: 400 })
   }
-  if (!reg.office_photo_urls || reg.office_photo_urls.length === 0) {
+  // Office-space photo + NIN/BVN identity confirmation. Both are normally hard
+  // gates; the pilot flag turns them into recorded exceptions instead of
+  // blockers so the flow can be exercised end to end. See lib/pilot.ts.
+  const relaxed = officeChecksRelaxed()
+  const missingPhotos = !reg.office_photo_urls || reg.office_photo_urls.length === 0
+  const missingIdentity = !reg.identity_verified && !reg.identity_verify_waived
+
+  if (missingPhotos && !relaxed) {
     return NextResponse.json({ error: 'Please upload at least one photo of the office space.' }, { status: 400 })
   }
 
-  // Identity must be verified (NIN/BVN) — or waived by staff.
-  if (!reg.identity_verified && !reg.identity_verify_waived) {
+  if (missingIdentity && !relaxed) {
     return NextResponse.json(
       { error: 'Please verify your identity with your NIN or BVN before submitting.' },
       { status: 403 }
     )
+  }
+
+  // Leave a trail of exactly what was waived, so these registrations can be
+  // found and re-verified when the checks are hardened.
+  const skipNote = relaxed ? describeSkippedOfficeChecks({ missingPhotos, missingIdentity }) : null
+  if (skipNote) {
+    await service.from('office_registration_notes').insert({
+      registration_id: params.id,
+      staff_id: user.id,
+      note: skipNote,
+      action: 'pilot_checks_relaxed',
+    })
   }
 
   if (isResubmit) {

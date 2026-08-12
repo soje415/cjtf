@@ -131,10 +131,12 @@ export function IdCardPreview({
               Official Identification Card — Federal Republic of Nigeria
             </p>
           </div>
-          <div style={{
-            fontSize: 5, fontWeight: 700, color: C.green,
-            background: C.white, padding: '2px 4px', borderRadius: 2,
-          }}>CJTF</div>
+          {/* National coat of arms — replaces the white "CJTF" tag that used to
+              sit here. The card already says CJTF twice in this band; the arms
+              carry the federal authority the tag never did. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/coat-of-arms.jpeg" alt="Coat of arms of Nigeria" crossOrigin="anonymous"
+            style={{ width: 30, height: 30, objectFit: 'contain', flexShrink: 0 }} />
         </div>
 
         {/* BODY */}
@@ -156,6 +158,16 @@ export function IdCardPreview({
                 <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, color: '#9ca3af' }}>Photo</div>
               )}
             </div>
+
+            {/* Blood group sits directly under the photo, deliberately the
+                boldest small field on the card — it is the one value a medic
+                needs to read at a glance in an emergency. */}
+            {bloodGroup && (
+              <div style={{ marginTop: 3, textAlign: 'center', width: '100%' }}>
+                <p style={{ fontSize: 4.5, color: C.grey, textTransform: 'uppercase', letterSpacing: 0.5, margin: 0 }}>Blood Group</p>
+                <p style={{ fontSize: 11, fontWeight: 800, color: C.red, margin: '1px 0 0 0', lineHeight: 1 }}>{bloodGroup}</p>
+              </div>
+            )}
           </div>
 
           {/* Details column */}
@@ -174,7 +186,6 @@ export function IdCardPreview({
               <SmallField label="State of Origin" value={stateOfOrigin} />
               <SmallField label="LGA" value={lga} />
               {nin && <SmallField label="NIN" value={nin} />}
-              {bloodGroup && <SmallField label="Blood Group" value={bloodGroup} />}
               <SmallField label="Issue Date" value={issueDate} />
               <SmallField label="Expiry Date" value={expiryDate} />
             </div>
@@ -191,6 +202,15 @@ export function IdCardPreview({
               </div>
             )}
             <p style={{ fontSize: 5, color: C.grey, textAlign: 'center', margin: 0 }}>Scan to{'\n'}Verify</p>
+
+            {/* Ghosted repeat of the passport photo beneath the QR — a cheap
+                tamper check: swapping the main photo without also matching this
+                one is visible to the naked eye. */}
+            {photoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={photoUrl} alt="" crossOrigin="anonymous"
+                style={{ width: 34, height: 40, objectFit: 'cover', opacity: 0.18, filter: 'grayscale(1)', borderRadius: 1 }} />
+            )}
           </div>
         </div>
 
@@ -211,17 +231,43 @@ export function IdCardPreview({
   )
 }
 
-export interface IdCardBackPreviewProps {
-  cjtfId: string
+
+function BackField({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div>
+      <p style={{ fontSize: 4, color: C.grey, textTransform: 'uppercase', letterSpacing: 0.4, margin: 0 }}>{label}</p>
+      <p style={{
+        fontSize: accent ? 6.5 : 5.5,
+        fontWeight: 700,
+        color: accent ? C.green : C.black,
+        margin: '0.5px 0 0 0',
+        lineHeight: 1.15,
+      }}>{value}</p>
+    </div>
+  )
 }
 
+export interface IdCardBackPreviewProps {
+  cjtfId: string
+  fullName?: string
+  designation?: string
+  bloodGroup?: string
+  issueDate?: string
+  expiryDate?: string
+}
+
+// Trimmed to the three that carry legal weight. The back used to run these long
+// and then leave half the card empty; shorter lines let the reference block and
+// signatures fit above the fold instead.
 const TERMS = [
-  'This card is non-transferable and remains the property of CJTF Nigeria.',
-  'Must be surrendered on demand to an authorized CJTF or law enforcement officer.',
-  'Loss or theft must be reported immediately to the nearest CJTF office.',
+  'Non-transferable. Remains the property of CJTF Nigeria.',
+  'Surrender on demand to an authorized CJTF or law enforcement officer.',
+  'Report loss or theft immediately to the nearest CJTF office.',
 ]
 
-export function IdCardBackPreview({ cjtfId }: IdCardBackPreviewProps) {
+export function IdCardBackPreview({
+  cjtfId, fullName, designation, bloodGroup, issueDate, expiryDate,
+}: IdCardBackPreviewProps) {
   // Same footprint as the front so the two pages line up when printed.
   const STRIPE = 15
   const CARD_W = 342
@@ -250,7 +296,7 @@ export function IdCardBackPreview({ cjtfId }: IdCardBackPreviewProps) {
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 0 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/cjtf-logo.jpg" alt="" crossOrigin="anonymous"
-            style={{ width: 150, height: 150, objectFit: 'contain', opacity: 0.06, filter: 'grayscale(1)' }} />
+            style={{ width: 110, height: 110, objectFit: 'contain', opacity: 0.04, filter: 'grayscale(1)' }} />
         </div>
 
         {/* HEADER – black band */}
@@ -264,25 +310,63 @@ export function IdCardBackPreview({ cjtfId }: IdCardBackPreviewProps) {
           </p>
         </div>
 
-        {/* BODY */}
-        <div style={{ flex: 1, padding: '8px 10px 4px 10px', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {/* BODY — two columns so the card's height is actually used: reference
+            data on the left, terms on the right, signatures pinned underneath. */}
+        <div style={{ flex: 1, padding: '6px 8px 3px 8px', position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
 
-          {/* Terms */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {TERMS.map((t) => (
-              <p key={t} style={{ fontSize: 5.5, color: C.black, margin: 0, lineHeight: 1.35 }}>&bull;&nbsp; {t}</p>
-            ))}
+          <div style={{ display: 'flex', flexDirection: 'row', gap: 8, flex: 1 }}>
+
+            {/* Holder reference block */}
+            <div style={{ width: 116, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+              {fullName && <BackField label="Holder" value={fullName} />}
+              {designation && <BackField label="Rank" value={designation} accent />}
+              <div style={{ display: 'flex', flexDirection: 'row', gap: 6 }}>
+                {issueDate && <div style={{ flex: 1 }}><BackField label="Issued" value={issueDate} /></div>}
+                {expiryDate && <div style={{ flex: 1 }}><BackField label="Expires" value={expiryDate} /></div>}
+              </div>
+              {bloodGroup && <BackField label="Blood Group" value={bloodGroup} accent />}
+
+              {/* Fills what was dead space under the reference block, and puts the
+                  recovery instruction on the face someone actually turns over. */}
+              <div style={{ marginTop: 'auto', paddingTop: 3 }}>
+                <p style={{ fontSize: 4, color: C.grey, textTransform: 'uppercase', letterSpacing: 0.4, margin: 0 }}>If Found</p>
+                <p style={{ fontSize: 4.8, color: C.black, margin: '0.5px 0 0 0', lineHeight: 1.25 }}>
+                  Return to the nearest CJTF office or hand to any police station.
+                </p>
+              </div>
+            </div>
+
+            {/* Vertical rule keeps the two columns visually distinct now that
+                both are dense. */}
+            <div style={{ width: 1, background: '#e5e7eb', flexShrink: 0 }} />
+
+            {/* Terms */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+              <p style={{ fontSize: 4.5, color: C.grey, textTransform: 'uppercase', letterSpacing: 0.5, margin: 0 }}>Conditions of Use</p>
+              {TERMS.map((t) => (
+                <p key={t} style={{ fontSize: 5, color: C.black, margin: 0, lineHeight: 1.3 }}>&bull;&nbsp; {t}</p>
+              ))}
+
+              {/* Verification pointer — the back is where someone checks the card
+                  is real, so tell them how without needing the QR on the front. */}
+              <div style={{ marginTop: 'auto', paddingTop: 3 }}>
+                <p style={{ fontSize: 4, color: C.grey, textTransform: 'uppercase', letterSpacing: 0.4, margin: 0 }}>Verify This Card</p>
+                <p style={{ fontSize: 4.8, color: C.black, margin: '0.5px 0 0 0', lineHeight: 1.25 }}>
+                  Scan the QR on the front, or enter the CJTF ID below at cjtf.gov.ng/verify
+                </p>
+              </div>
+            </div>
           </div>
 
-          {/* Signature strip */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'row', alignItems: 'flex-end', gap: 16, paddingBottom: 4 }}>
+          {/* Signature strip — compact, sits on the baseline */}
+          <div style={{ display: 'flex', flexDirection: 'row', gap: 14, paddingBottom: 2 }}>
             <div style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ borderBottom: `1px solid ${C.grey}`, height: 22 }} />
-              <p style={{ fontSize: 5, color: C.grey, margin: '2px 0 0 0' }}>Holder&apos;s Signature</p>
+              <div style={{ borderBottom: `1px solid ${C.grey}`, height: 13 }} />
+              <p style={{ fontSize: 4.5, color: C.grey, margin: '1px 0 0 0' }}>Holder&apos;s Signature</p>
             </div>
             <div style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ borderBottom: `1px solid ${C.grey}`, height: 22 }} />
-              <p style={{ fontSize: 5, color: C.grey, margin: '2px 0 0 0' }}>Issuing Officer &amp; Stamp</p>
+              <div style={{ borderBottom: `1px solid ${C.grey}`, height: 13 }} />
+              <p style={{ fontSize: 4.5, color: C.grey, margin: '1px 0 0 0' }}>Issuing Officer &amp; Stamp</p>
             </div>
           </div>
         </div>
@@ -337,7 +421,13 @@ export default function IdCardDownload(props: DownloadProps) {
           <div className="mt-8">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Card Preview — Back</p>
             <div className="flex justify-center">
-              <IdCardBackPreview cjtfId={cjtfId} />
+              <IdCardBackPreview
+                cjtfId={cjtfId}
+                fullName={fullName}
+                designation={props.designation}
+                bloodGroup={props.bloodGroup}
+                issueDate={props.issueDate}
+              />
             </div>
           </div>
         </div>
