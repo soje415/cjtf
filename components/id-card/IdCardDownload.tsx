@@ -54,14 +54,18 @@ export function IdCardPreview({
 
   useEffect(() => {
     mounted.current = true
-    if (qrDataUrlProp !== undefined || !verifyUrl) return
+    // Generate whenever no usable QR was handed down. This used to check
+    // `qrDataUrlProp !== undefined`, but the ICT review passes its own state,
+    // which is `null` until its generation resolves — and `null !== undefined`,
+    // so the fallback short-circuited and the card rendered with no QR at all.
+    if (qrDataUrlProp || !verifyUrl) return
     import('qrcode').then(QRCode => QRCode.toDataURL(verifyUrl, { width: 96, margin: 1 }))
       .then(url => { if (mounted.current) setQrDataUrlState(url) })
       .catch(() => {})
     return () => { mounted.current = false }
   }, [verifyUrl, qrDataUrlProp])
 
-  const qrDataUrl = qrDataUrlProp !== undefined ? qrDataUrlProp : qrDataUrlState
+  const qrDataUrl = qrDataUrlProp || qrDataUrlState
 
   const expiryYear = new Date().getFullYear() + 4
   const expiryDate = `${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}/${expiryYear}`
@@ -296,7 +300,7 @@ export function IdCardBackPreview({
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 0 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/cjtf-logo.jpg" alt="" crossOrigin="anonymous"
-            style={{ width: 110, height: 110, objectFit: 'contain', opacity: 0.04, filter: 'grayscale(1)' }} />
+            style={{ width: 168, height: 168, objectFit: 'contain', opacity: 0.10, filter: 'grayscale(1)' }} />
         </div>
 
         {/* HEADER – black band */}
