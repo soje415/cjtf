@@ -1,6 +1,8 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import IdCardDownload from '@/components/id-card/IdCardDownload'
+import { rankForCard } from '@/lib/ranks'
+import { memberVerifyUrl } from '@/lib/portal-url'
 
 export default async function IdCardPage() {
   const supabase = createClient()
@@ -27,7 +29,7 @@ export default async function IdCardPage() {
     ? new Date(app.date_of_birth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
     : ''
 
-  const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify/${app.id}`
+  const verifyUrl = memberVerifyUrl(app.id)
 
   return (
     <IdCardDownload
@@ -39,7 +41,7 @@ export default async function IdCardPage() {
       gender={app.gender ?? ''}
       nin={app.nin ?? undefined}
       bloodGroup={app.blood_group ?? undefined}
-      designation="VOLUNTEER MEMBER"
+      designation={rankForCard(app.cjtf_rank)}
       issueDate={issueDate}
       photoUrl={app.passport_photo_url ?? ''}
       pdfUrl={app.id_card_pdf_url ?? ''}

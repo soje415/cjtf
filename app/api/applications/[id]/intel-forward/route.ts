@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { sendSms } from '@/lib/termii'
+import { isValidRank } from '@/lib/ranks'
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -8,8 +9,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const user = _session?.user
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { note } = await req.json()
+  const { note, recommendedRank } = await req.json()
   if (!note?.trim()) return NextResponse.json({ error: 'Screening note required' }, { status: 400 })
+  if (!isValidRank(recommendedRank)) {
+    return NextResponse.json({ error: 'Select a recommended rank' }, { status: 400 })
+  }
 
   const service = createServiceClient()
   const { data: profile } = await service.from('profiles').select('role').eq('id', user.id).single()
@@ -31,6 +35,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     .from('applications')
     .update({
       status: 'PENDING_ADMIN_APPROVAL',
+      recommended_rank: recommendedRank,
       int_cleared_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
@@ -41,12 +46,20 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   if (!moved) return NextResponse.json({ ok: true, alreadyProcessed: true })
 
-  await service.from('application_notes').insert({
-    application_id: params.id,
-    staff_id: user.id,
-    note: note.trim(),
-    action: 'int_cleared',
-  })
+  await service.from('application_notes').insert([
+    {
+      application_id: params.id,
+      staff_id: user.id,
+      note: note.trim(),
+      action: 'int_cleared',
+    },
+    {
+      application_id: params.id,
+      staff_id: user.id,
+      note: `Recommended rank: ${recommendedRank}`,
+      action: 'rank_recommended',
+    },
+  ])
 
   // Notify all Admin officers
   const { data: admins } = await service.from('profiles').select('phone').eq('role', 'admin')

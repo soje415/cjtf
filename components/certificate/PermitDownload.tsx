@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import OperationalPermit, { PermitProps } from './OperationalPermit'
+import { officeVerifyUrl } from '@/lib/portal-url'
 
 export default function PermitDownload({
   registrationId,
@@ -21,7 +22,7 @@ export default function PermitDownload({
   const pdfUrl = initialPdfUrl
 
   useEffect(() => {
-    const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify/office/${registrationId}`
+    const verifyUrl = officeVerifyUrl(registrationId)
     import('qrcode').then(QRCode => QRCode.toDataURL(verifyUrl, { width: 150, margin: 1 }))
       .then(setQrDataUrl)
       .catch(() => {})

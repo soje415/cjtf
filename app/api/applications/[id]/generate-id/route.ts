@@ -30,6 +30,15 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     if (appErr) return NextResponse.json({ error: 'App lookup failed: ' + appErr.message }, { status: 500 })
     if (!app) return NextResponse.json({ error: 'Invalid application state or not found' }, { status: 400 })
 
+    // The rank is printed on the card face, so a card can't be issued without
+    // one. Admin sets it at approval, which is upstream of this route.
+    if (!app.cjtf_rank) {
+      return NextResponse.json(
+        { error: 'No rank assigned by Command — the ID card cannot be issued without one.' },
+        { status: 400 }
+      )
+    }
+
     // Generate unique CJTF ID
     let cjtfId: string
     try {
@@ -63,7 +72,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     if (app.phone_number) {
       await sendSms(
         app.phone_number,
-        `Congratulations ${fullName}! Your CJTF ID has been generated. ID: ${cjtfId}. Login to download: ${process.env.NEXT_PUBLIC_APP_URL}/portal/applicant/id-card`
+        `Congratulations ${fullName}! Your CJTF ID has been generated. Rank: ${app.cjtf_rank}. ID: ${cjtfId}. Login to download: ${process.env.NEXT_PUBLIC_APP_URL}/portal/applicant/id-card`
       ).catch(() => {})
     }
 

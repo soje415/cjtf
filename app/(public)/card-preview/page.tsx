@@ -20,7 +20,7 @@ export default function CardPreviewPage() {
     gender: 'male',
     nin: '12345678901',
     bloodGroup: 'O+',
-    designation: 'VOLUNTEER MEMBER',
+    designation: 'CHIEF INSPECTOR',
     issueDate: '12/08/2026',
     photoUrl: '/cjtf-logo.jpg',
     verifyUrl: 'https://cjtf.vercel.app/verify/sample',

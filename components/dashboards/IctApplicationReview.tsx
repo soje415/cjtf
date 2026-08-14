@@ -13,6 +13,8 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
 import { IdCardPreview, IdCardBackPreview } from '@/components/id-card/IdCardDownload'
+import { rankForCard } from '@/lib/ranks'
+import { memberVerifyUrl } from '@/lib/portal-url'
 import { captureFrontAndBackAsPdf, toDataUrl } from '@/lib/capture-pdf'
 import { toast } from 'sonner'
 
@@ -98,7 +100,7 @@ export default function IctApplicationReview({ application, payments, notes }: P
       setPhotoDataUrl(photoUrl)
 
       // 3. Generate the QR code up front so html2canvas never races its image load
-      const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify/${application.id}`
+      const verifyUrl = memberVerifyUrl(application.id)
       try {
         const QRCode = await import('qrcode')
         setQrDataUrl(await QRCode.toDataURL(verifyUrl, { width: 96, margin: 1 }))
@@ -166,7 +168,7 @@ export default function IctApplicationReview({ application, payments, notes }: P
   if (generated) {
     const fullName = [application.first_name, application.middle_name, application.last_name]
       .filter(Boolean).join(' ')
-    const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify/${application.id}`
+    const verifyUrl = memberVerifyUrl(application.id)
     const issueDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
     const dateOfBirth = application.date_of_birth
       ? new Date(application.date_of_birth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -202,7 +204,7 @@ export default function IctApplicationReview({ application, payments, notes }: P
                 gender={application.gender ?? ''}
                 nin={application.nin ?? undefined}
                 bloodGroup={application.blood_group ?? undefined}
-                designation="VOLUNTEER MEMBER"
+                designation={rankForCard(application.cjtf_rank)}
                 issueDate={issueDate}
                 photoUrl={photoDataUrl ?? application.passport_photo_url ?? ''}
                 verifyUrl={verifyUrl}
@@ -219,7 +221,7 @@ export default function IctApplicationReview({ application, payments, notes }: P
               <IdCardBackPreview
                 cjtfId={generated.cjtfId}
                 fullName={fullName}
-                designation="VOLUNTEER MEMBER"
+                designation={rankForCard(application.cjtf_rank)}
                 bloodGroup={application.blood_group ?? undefined}
                 issueDate={issueDate}
               />
@@ -291,6 +293,8 @@ export default function IctApplicationReview({ application, payments, notes }: P
           <CardContent className="grid grid-cols-2 gap-2 text-sm">
             {[
               ['Full Name', `${application.first_name} ${application.middle_name ?? ''} ${application.last_name}`],
+              // What Command assigned — this is the string that prints on the card.
+              ['Rank', application.cjtf_rank ?? 'Not yet assigned'],
               ['Date of Birth', application.date_of_birth ?? '—'],
               ['Gender', application.gender ?? '—'],
               ['NIN', application.nin || '—'],

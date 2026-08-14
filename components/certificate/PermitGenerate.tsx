@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { captureElementAsA4Pdf } from '@/lib/capture-pdf'
 import OperationalPermit from './OperationalPermit'
+import { officeVerifyUrl } from '@/lib/portal-url'
 
 interface Props {
   registrationId: string
@@ -43,7 +44,7 @@ export default function PermitGenerate({
       // 1b. Generate the QR up front so html2canvas never races its image load
       try {
         const QRCode = await import('qrcode')
-        const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/verify/office/${registrationId}`
+        const verifyUrl = officeVerifyUrl(registrationId)
         setQrDataUrl(await QRCode.toDataURL(verifyUrl, { width: 150, margin: 1 }))
       } catch { /* permit renders without a QR image if this fails */ }
 

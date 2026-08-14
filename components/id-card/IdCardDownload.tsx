@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { PORTAL_HOST } from '@/lib/portal-url'
 
 export interface IdCardPreviewProps {
   fullName: string
@@ -36,6 +37,63 @@ const C = {
   yellow: '#FFD700',
 }
 
+/**
+ * Cards run four years from issue. Derived from the issue date rather than
+ * "today + 4" so a reprint of an old card shows the same expiry the original
+ * PDF did; falls back to today only when no issue date is readable.
+ */
+export function cardExpiryDate(issueDate?: string): string {
+  const raw = (issueDate ?? '').trim()
+  // Card dates are written DD/MM/YYYY, which Date() reads as MM/DD/YYYY — left
+  // to the built-in parser, 12/08/2026 expires in December rather than August.
+  const dmy = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  const issued = dmy
+    ? new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1]))
+    : raw ? new Date(raw) : new Date()
+  const base = Number.isNaN(issued.getTime()) ? new Date() : issued
+  const day = String(base.getDate()).padStart(2, '0')
+  const month = String(base.getMonth() + 1).padStart(2, '0')
+  return `${day}/${month}/${base.getFullYear() + 4}`
+}
+
+/**
+ * Guilloche-style security hatch, as an SVG data URI.
+ *
+ * It has to be an image, not CSS. The card people actually carry is the PDF,
+ * and the PDF is an html2canvas raster of these very elements — html2canvas
+ * silently drops `repeating-linear-gradient`, so a CSS-drawn pattern looks
+ * right in the browser and prints as a flat tint. An <img> is drawn onto the
+ * capture canvas like any other image, so what you see is what prints.
+ */
+function securityPattern({ base, line, fine }: { base: string; line: number; fine: number }): string {
+  // Grayscale on purpose: a neutral hatch reads as security printing and stays
+  // out of the way of the card's actual colour (green/gold/red), which belongs
+  // to the bands, the rank badge and the blood group — not the background.
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="327" height="216">
+<defs>
+<pattern id="a" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+<line x1="0" y1="0" x2="0" y2="6" stroke="#2b2b2b" stroke-width="0.8" stroke-opacity="${line}"/>
+</pattern>
+<pattern id="b" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
+<line x1="0" y1="0" x2="0" y2="6" stroke="#2b2b2b" stroke-width="0.8" stroke-opacity="${line * 0.8}"/>
+</pattern>
+<pattern id="c" width="11" height="11" patternUnits="userSpaceOnUse">
+<line x1="0" y1="0" x2="0" y2="11" stroke="#2b2b2b" stroke-width="0.6" stroke-opacity="${fine}"/>
+</pattern>
+</defs>
+<rect width="100%" height="100%" fill="${base}"/>
+<rect width="100%" height="100%" fill="url(#a)"/>
+<rect width="100%" height="100%" fill="url(#b)"/>
+<rect width="100%" height="100%" fill="url(#c)"/>
+</svg>`
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+}
+
+// The front carries far more small text than the back, so it gets the same
+// hatch geometry at roughly half strength.
+const FRONT_PATTERN_BASE = '#e8eae9'
+const FRONT_PATTERN = securityPattern({ base: FRONT_PATTERN_BASE, line: 0.07, fine: 0.04 })
+
 function SmallField({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -67,8 +125,7 @@ export function IdCardPreview({
 
   const qrDataUrl = qrDataUrlProp || qrDataUrlState
 
-  const expiryYear = new Date().getFullYear() + 4
-  const expiryDate = `${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}/${expiryYear}`
+  const expiryDate = cardExpiryDate(issueDate)
 
   // 342 × 216 px  (≈ 2× CR80)
   const STRIPE = 15   // left stripe total width
@@ -95,14 +152,19 @@ export function IdCardPreview({
       {/* ── MAIN CARD CONTENT ── */}
       <div style={{ width: MAIN_W, height: CARD_H, display: 'flex', flexDirection: 'column', position: 'relative' }}>
 
-        {/* White base so the watermark has something to sit on */}
-        <div style={{ position: 'absolute', inset: 0, background: C.white, zIndex: 0 }} />
+        {/* Tinted base + the same security hatch as the back, at roughly half
+            strength: enough to take the glare off a blank white face without
+            competing with the field text sitting on top of it. */}
+        <div style={{ position: 'absolute', inset: 0, background: FRONT_PATTERN_BASE, zIndex: 0 }} />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={FRONT_PATTERN} alt="" aria-hidden
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }} />
 
         {/* Watermark */}
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 0 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/cjtf-logo.jpg" alt="" crossOrigin="anonymous"
-            style={{ width: 150, height: 150, objectFit: 'contain', opacity: 0.06, filter: 'grayscale(1)' }} />
+            style={{ width: 150, height: 150, objectFit: 'contain', opacity: 0.05 }} />
         </div>
 
         {/* Foil / hologram accent */}
@@ -165,11 +227,16 @@ export function IdCardPreview({
 
             {/* Blood group sits directly under the photo, deliberately the
                 boldest small field on the card — it is the one value a medic
-                needs to read at a glance in an emergency. */}
+                needs to read at a glance in an emergency, so it gets a boxed
+                red chip rather than another grey label/value pair. */}
             {bloodGroup && (
-              <div style={{ marginTop: 3, textAlign: 'center', width: '100%' }}>
-                <p style={{ fontSize: 4.5, color: C.grey, textTransform: 'uppercase', letterSpacing: 0.5, margin: 0 }}>Blood Group</p>
-                <p style={{ fontSize: 11, fontWeight: 800, color: C.red, margin: '1px 0 0 0', lineHeight: 1 }}>{bloodGroup}</p>
+              <div style={{
+                marginTop: 3, width: 64, textAlign: 'center',
+                border: `1.5px solid ${C.red}`, borderRadius: 3,
+                background: '#fff', padding: '1px 0 2px 0',
+              }}>
+                <p style={{ fontSize: 5, color: C.red, textTransform: 'uppercase', letterSpacing: 0.6, margin: 0, fontWeight: 700, lineHeight: 1.4 }}>Blood Group</p>
+                <p style={{ fontSize: 17, fontWeight: 800, color: C.red, margin: 0, lineHeight: 1.3 }}>{bloodGroup}</p>
               </div>
             )}
           </div>
@@ -179,9 +246,20 @@ export function IdCardPreview({
             <p style={{ fontSize: 10, fontWeight: 700, color: C.black, margin: 0, lineHeight: 1.2 }}>{fullName}</p>
             <p style={{ fontSize: 8, fontWeight: 700, color: C.green, letterSpacing: 0.3, margin: '1px 0 3px 0' }}>{cjtfId}</p>
 
-            {/* Rank / Designation */}
-            <p style={{ fontSize: 4.5, color: C.grey, textTransform: 'uppercase', letterSpacing: 0.5, margin: 0 }}>Rank</p>
-            <p style={{ fontSize: 8, fontWeight: 700, color: C.green, margin: '1px 0 4px 0', lineHeight: 1 }}>{designation}</p>
+            {/* Rank — the operative fact on the card, so it reads as a filled
+                badge rather than another label/value pair lost in the grid. */}
+            <div style={{ margin: '0 0 4px 0' }}>
+              {/* Sized with generous line-height and padding rather than a tight
+                  flex box: html2canvas measures text boxes slightly differently
+                  from the browser and clips the descenders of a snug badge. */}
+              <div style={{
+                background: C.green, borderRadius: 2, display: 'inline-block',
+                padding: '2.5px 6px 3.5px 6px', whiteSpace: 'nowrap',
+              }}>
+                <span style={{ fontSize: 4.5, color: C.gold, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700, lineHeight: 1.4 }}>Rank&nbsp;&nbsp;</span>
+                <span style={{ fontSize: 8.5, color: C.white, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.4 }}>{designation}</span>
+              </div>
+            </div>
 
             {/* Small fields grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 8px' }}>
@@ -197,14 +275,22 @@ export function IdCardPreview({
 
           {/* QR column */}
           <div style={{ width: 50, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
-            {qrDataUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={qrDataUrl} alt="QR" style={{ width: 46, height: 46 }} />
-            ) : (
-              <div style={{ width: 46, height: 46, background: '#f0f0f0', border: '1px solid #ccc', borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: verifyUrl ? 5 : 7, color: '#9ca3af' }}>
-                {verifyUrl ? 'Loading…' : 'QR'}
-              </div>
-            )}
+            {/* The QR sits on its own solid white panel. A scanner needs the
+                quiet zone clean, and the card's watermark runs straight under
+                this column. */}
+            <div style={{
+              background: '#fff', padding: 2, borderRadius: 2,
+              border: `1px solid ${C.green}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              {qrDataUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={qrDataUrl} alt="QR" style={{ width: 44, height: 44, display: 'block' }} />
+              ) : (
+                <div style={{ width: 44, height: 44, background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: verifyUrl ? 5 : 7, color: '#9ca3af' }}>
+                  {verifyUrl ? 'Loading…' : 'QR'}
+                </div>
+              )}
+            </div>
             <p style={{ fontSize: 5, color: C.grey, textAlign: 'center', margin: 0 }}>Scan to{'\n'}Verify</p>
 
             {/* Ghosted repeat of the passport photo beneath the QR — a cheap
@@ -213,7 +299,7 @@ export function IdCardPreview({
             {photoUrl && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={photoUrl} alt="" crossOrigin="anonymous"
-                style={{ width: 34, height: 40, objectFit: 'cover', opacity: 0.18, filter: 'grayscale(1)', borderRadius: 1 }} />
+                style={{ width: 34, height: 40, objectFit: 'cover', opacity: 0.16, borderRadius: 1 }} />
             )}
           </div>
         </div>
@@ -235,6 +321,12 @@ export function IdCardPreview({
   )
 }
 
+
+// ── Back-face security pattern ────────────────────────────────────────────
+// Stronger than the front — the back has room for it — and kept as a module
+// constant so every surface that renders a card back gets the identical tone.
+const PATTERN_BASE = '#dcdedd'
+const BACK_PATTERN = securityPattern({ base: PATTERN_BASE, line: 0.11, fine: 0.06 })
 
 function BackField({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
@@ -270,7 +362,8 @@ const TERMS = [
 ]
 
 export function IdCardBackPreview({
-  cjtfId, fullName, designation, bloodGroup, issueDate, expiryDate,
+  cjtfId, fullName, designation, bloodGroup, issueDate,
+  expiryDate = cardExpiryDate(issueDate),
 }: IdCardBackPreviewProps) {
   // Same footprint as the front so the two pages line up when printed.
   const STRIPE = 15
@@ -294,13 +387,22 @@ export function IdCardBackPreview({
       </div>
 
       {/* ── MAIN CARD CONTENT ── */}
-      <div style={{ width: MAIN_W, height: CARD_H, display: 'flex', flexDirection: 'column', position: 'relative', background: C.white }}>
+      <div style={{ width: MAIN_W, height: CARD_H, display: 'flex', flexDirection: 'column', position: 'relative', background: PATTERN_BASE }}>
+
+        {/* Guilloche-style security pattern. A blank white back reads as a
+            photocopy; the crossed hatch gives the card a printed-document
+            surface and makes a flatbed copy visibly coarser than the original.
+            Built from repeating-linear-gradients only — html2canvas renders
+            those faithfully during the PDF capture, unlike conic/radial. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={BACK_PATTERN} alt="" aria-hidden
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }} />
 
         {/* Watermark */}
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 0 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/cjtf-logo.jpg" alt="" crossOrigin="anonymous"
-            style={{ width: 168, height: 168, objectFit: 'contain', opacity: 0.10, filter: 'grayscale(1)' }} />
+            style={{ width: 168, height: 168, objectFit: 'contain', opacity: 0.09 }} />
         </div>
 
         {/* HEADER – black band */}
@@ -320,15 +422,30 @@ export function IdCardBackPreview({
 
           <div style={{ display: 'flex', flexDirection: 'row', gap: 8, flex: 1 }}>
 
-            {/* Holder reference block */}
-            <div style={{ width: 116, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            {/* Holder reference block. The translucent panel keeps the text
+                legible where it crosses the hatch pattern. */}
+            <div style={{
+              width: 116, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 2.5,
+              background: 'rgba(255,255,255,0.55)', border: '0.5px solid rgba(43,43,43,0.16)', borderRadius: 3, padding: '3px 4px',
+            }}>
               {fullName && <BackField label="Holder" value={fullName} />}
               {designation && <BackField label="Rank" value={designation} accent />}
               <div style={{ display: 'flex', flexDirection: 'row', gap: 6 }}>
                 {issueDate && <div style={{ flex: 1 }}><BackField label="Issued" value={issueDate} /></div>}
                 {expiryDate && <div style={{ flex: 1 }}><BackField label="Expires" value={expiryDate} /></div>}
               </div>
-              {bloodGroup && <BackField label="Blood Group" value={bloodGroup} accent />}
+
+              {/* Blood group — same red chip treatment as the front, so the
+                  value reads identically whichever face is showing. */}
+              {bloodGroup && (
+                <div style={{
+                  border: `1.2px solid ${C.red}`, borderRadius: 3, background: '#fff',
+                  padding: '1px 5px 2px 5px', alignSelf: 'flex-start', whiteSpace: 'nowrap',
+                }}>
+                  <span style={{ fontSize: 4.2, color: C.red, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700, lineHeight: 1.5 }}>Blood Group&nbsp;&nbsp;</span>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: C.red, lineHeight: 1.5 }}>{bloodGroup}</span>
+                </div>
+              )}
 
               {/* Fills what was dead space under the reference block, and puts the
                   recovery instruction on the face someone actually turns over. */}
@@ -345,7 +462,10 @@ export function IdCardBackPreview({
             <div style={{ width: 1, background: '#e5e7eb', flexShrink: 0 }} />
 
             {/* Terms */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            <div style={{
+              flex: 1, display: 'flex', flexDirection: 'column', gap: 2.5,
+              background: 'rgba(255,255,255,0.55)', border: '0.5px solid rgba(43,43,43,0.16)', borderRadius: 3, padding: '3px 4px',
+            }}>
               <p style={{ fontSize: 4.5, color: C.grey, textTransform: 'uppercase', letterSpacing: 0.5, margin: 0 }}>Conditions of Use</p>
               {TERMS.map((t) => (
                 <p key={t} style={{ fontSize: 5, color: C.black, margin: 0, lineHeight: 1.3 }}>&bull;&nbsp; {t}</p>
@@ -356,7 +476,8 @@ export function IdCardBackPreview({
               <div style={{ marginTop: 'auto', paddingTop: 3 }}>
                 <p style={{ fontSize: 4, color: C.grey, textTransform: 'uppercase', letterSpacing: 0.4, margin: 0 }}>Verify This Card</p>
                 <p style={{ fontSize: 4.8, color: C.black, margin: '0.5px 0 0 0', lineHeight: 1.25 }}>
-                  Scan the QR on the front, or enter the CJTF ID below at cjtf.gov.ng/verify
+                  Scan the QR on the front, or enter the CJTF ID below at{' '}
+                  <span style={{ fontWeight: 700, color: C.green }}>{PORTAL_HOST}/verify</span>
                 </p>
               </div>
             </div>
@@ -382,7 +503,7 @@ export function IdCardBackPreview({
           padding: '0 8px',
         }}>
           <p style={{ fontSize: 4.5, color: C.white, margin: 0 }}>CJTF ID: {cjtfId}</p>
-          <p style={{ fontSize: 4.5, color: C.gold, margin: 0, fontWeight: 700 }}>www.cjtf.gov.ng</p>
+          <p style={{ fontSize: 4.5, color: C.gold, margin: 0, fontWeight: 700 }}>{PORTAL_HOST}</p>
         </div>
 
         {/* BLACK BOTTOM STRIPE */}

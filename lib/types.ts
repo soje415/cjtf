@@ -25,6 +25,8 @@ export type NoteAction =
   | 'training_completed'
   | 'resubmitted'
   | 'identity_waived'
+  | 'rank_recommended'
+  | 'rank_assigned'
 
 export interface Profile {
   id: string
@@ -88,6 +90,14 @@ export interface Application {
   birth_cert_url: string | null
   guarantor_form_url: string | null
   age_declaration_url: string | null
+  // rank — INT recommends when clearing, Admin sets the final value when
+  // approving, ICT prints `cjtf_rank` on the ID card. Named `cjtf_rank` rather
+  // than `rank` because PostgREST reads a bare `rank` in a select list as the
+  // ordered-set aggregate and rejects the request.
+  recommended_rank: string | null
+  cjtf_rank: string | null
+  rank_assigned_by: string | null
+  rank_assigned_at: string | null
   cjtf_id_number: string | null
   id_card_pdf_url: string | null
   submitted_at: string | null

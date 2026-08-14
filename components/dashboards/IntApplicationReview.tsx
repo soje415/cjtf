@@ -10,7 +10,9 @@ import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
+import { CJTF_RANKS, DEFAULT_RECOMMENDED_RANK, type CjtfRank } from '@/lib/ranks'
 import { toast } from 'sonner'
 
 interface Props {
@@ -21,6 +23,9 @@ interface Props {
 export default function IntApplicationReview({ application, notes }: Props) {
   const router = useRouter()
   const [note, setNote] = useState('')
+  const [rank, setRank] = useState<CjtfRank>(
+    (application.recommended_rank as CjtfRank | null) ?? DEFAULT_RECOMMENDED_RANK
+  )
   const [loading, setLoading] = useState<'clear' | 'reject' | null>(null)
 
   async function handleAction(action: 'clear' | 'reject') {
@@ -28,12 +33,17 @@ export default function IntApplicationReview({ application, notes }: Props) {
       toast.error('Please add a screening note before proceeding')
       return
     }
+    // A rejection carries no rank — only clearing forwards a recommendation.
+    if (action === 'clear' && !rank) {
+      toast.error('Select a recommended rank before clearing')
+      return
+    }
     setLoading(action)
     const endpoint = action === 'clear' ? 'intel-forward' : 'reject'
     const res = await fetch(`/api/applications/${application.id}/${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ note }),
+      body: JSON.stringify(action === 'clear' ? { note, recommendedRank: rank } : { note }),
     })
     if (res.ok) {
       toast.success(action === 'clear' ? 'Application cleared — forwarded to Admin' : 'Application rejected')
@@ -131,6 +141,18 @@ export default function IntApplicationReview({ application, notes }: Props) {
       <Separator />
 
       <div className="space-y-3">
+        <div className="space-y-1">
+          <Label>Recommended Rank * (required to clear)</Label>
+          <Select value={rank} onValueChange={(v) => setRank((v as CjtfRank) ?? DEFAULT_RECOMMENDED_RANK)}>
+            <SelectTrigger className="w-full"><SelectValue placeholder="Select recommended rank" /></SelectTrigger>
+            <SelectContent>
+              {CJTF_RANKS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-gray-400">
+            Command reviews this recommendation and sets the final rank on approval.
+          </p>
+        </div>
         <div className="space-y-1">
           <Label>Screening Note * (required)</Label>
           <Textarea

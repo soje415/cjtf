@@ -48,7 +48,7 @@ export async function GET(req: Request) {
   const service = createServiceClient()
   const { data: app } = await service
     .from('applications')
-    .select('cjtf_id_number, first_name, middle_name, last_name, state_of_origin, lga_of_origin, passport_photo_url, completed_at')
+    .select('cjtf_id_number, first_name, middle_name, last_name, cjtf_rank, state_of_origin, lga_of_origin, passport_photo_url, completed_at')
     .eq('cjtf_id_number', cjtfId)
     .eq('status', 'COMPLETED')
     .maybeSingle()
@@ -63,6 +63,7 @@ export async function GET(req: Request) {
       member: {
         cjtfId: app.cjtf_id_number,
         fullName: [app.first_name, app.middle_name, app.last_name].filter(Boolean).join(' '),
+        rank: app.cjtf_rank,
         stateOfOrigin: app.state_of_origin,
         lgaOfOrigin: app.lga_of_origin,
         photoUrl: app.passport_photo_url,

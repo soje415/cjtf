@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { sendSms } from '@/lib/termii'
+import { isValidRank } from '@/lib/ranks'
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -8,8 +9,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const user = _session?.user
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { note } = await req.json()
+  const { note, rank } = await req.json()
   if (!note?.trim()) return NextResponse.json({ error: 'Decision note required' }, { status: 400 })
+  if (!isValidRank(rank)) {
+    return NextResponse.json({ error: 'Select the rank to assign' }, { status: 400 })
+  }
 
   const service = createServiceClient()
   const { data: profile } = await service.from('profiles').select('role').eq('id', user.id).single()
@@ -31,6 +35,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     .from('applications')
     .update({
       status: 'PENDING_TRAINING',
+      // Command's decision, not INT's recommendation — `recommended_rank` is
+      // left untouched so the trail keeps both.
+      cjtf_rank: rank,
+      rank_assigned_by: user.id,
+      rank_assigned_at: new Date().toISOString(),
       admin_approved_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
@@ -41,18 +50,26 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   if (!moved) return NextResponse.json({ ok: true, alreadyProcessed: true })
 
-  await service.from('application_notes').insert({
-    application_id: params.id,
-    staff_id: user.id,
-    note: note.trim(),
-    action: 'admin_approved',
-  })
+  await service.from('application_notes').insert([
+    {
+      application_id: params.id,
+      staff_id: user.id,
+      note: note.trim(),
+      action: 'admin_approved',
+    },
+    {
+      application_id: params.id,
+      staff_id: user.id,
+      note: `Rank assigned: ${rank}`,
+      action: 'rank_assigned',
+    },
+  ])
 
   // Notify the applicant that they've been cleared for training
   if (appInfo?.phone_number) {
     await sendSms(
       appInfo.phone_number,
-      `CJTF Portal: Congratulations ${appInfo.first_name} ${appInfo.last_name}, you have been cleared by Command and are now scheduled for training. You will be notified of the next steps.`
+      `CJTF Portal: Congratulations ${appInfo.first_name} ${appInfo.last_name}, you have been cleared by Command and assigned the rank of ${rank}. You are now scheduled for training and will be notified of the next steps.`
     ).catch(() => {})
   }
 

@@ -64,6 +64,12 @@ export default async function VerifyPage({ params }: { params: { id: string } })
                 <p className="text-xs text-gray-500 uppercase tracking-wide">CJTF ID Number</p>
                 <p className="font-mono font-bold text-cjtf-green">{app.cjtf_id_number}</p>
               </div>
+              {app.cjtf_rank && (
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide">Rank</p>
+                  <p className="font-bold text-gray-800">{app.cjtf_rank}</p>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <p className="text-xs text-gray-500">State</p>

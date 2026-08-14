@@ -11,7 +11,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
+import { CJTF_RANKS, DEFAULT_RECOMMENDED_RANK, type CjtfRank } from '@/lib/ranks'
 import { toast } from 'sonner'
 
 interface Props {
@@ -23,6 +25,13 @@ interface Props {
 export default function AdminApplicationReview({ application, payments, notes }: Props) {
   const router = useRouter()
   const [note, setNote] = useState('')
+  // Prefilled with INT's recommendation so approving with it is one click and
+  // overriding is a deliberate act.
+  const [rank, setRank] = useState<CjtfRank>(
+    (application.cjtf_rank as CjtfRank | null)
+      ?? (application.recommended_rank as CjtfRank | null)
+      ?? DEFAULT_RECOMMENDED_RANK
+  )
   const [loading, setLoading] = useState<'approve' | 'reject' | null>(null)
   const [waiveReason, setWaiveReason] = useState('')
   const [waiving, setWaiving] = useState(false)
@@ -52,12 +61,16 @@ export default function AdminApplicationReview({ application, payments, notes }:
       toast.error('Please add a decision note before proceeding')
       return
     }
+    if (action === 'approve' && !rank) {
+      toast.error('Select the rank to assign before approving')
+      return
+    }
     setLoading(action)
     const endpoint = action === 'approve' ? 'approve' : 'reject'
     const res = await fetch(`/api/applications/${application.id}/${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ note }),
+      body: JSON.stringify(action === 'approve' ? { note, rank } : { note }),
     })
     if (res.ok) {
       toast.success(action === 'approve' ? 'Applicant cleared! Sent to training.' : 'Application rejected.')
@@ -181,6 +194,20 @@ export default function AdminApplicationReview({ application, payments, notes }:
       <Separator />
 
       <div className="space-y-3">
+        <div className="space-y-1">
+          <Label>Rank to Assign * (required to approve)</Label>
+          <Select value={rank} onValueChange={(v) => setRank((v as CjtfRank) ?? DEFAULT_RECOMMENDED_RANK)}>
+            <SelectTrigger className="w-full"><SelectValue placeholder="Select rank" /></SelectTrigger>
+            <SelectContent>
+              {CJTF_RANKS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-gray-400">
+            {application.recommended_rank
+              ? <>Intelligence recommended <span className="font-semibold text-purple-700">{application.recommended_rank}</span>. Command&apos;s choice here is what prints on the ID card.</>
+              : <>No rank was recommended by Intelligence. This is what prints on the ID card.</>}
+          </p>
+        </div>
         <div className="space-y-1">
           <Label>Decision Note * (required)</Label>
           <Textarea
