@@ -14,10 +14,16 @@ const nextConfig = {
     return [{ source: '/', destination: WEBSITE_URL, permanent: false }]
   },
   images: {
+    // Derived from the Supabase URL rather than hard-coded: this was pinned to
+    // the old project's hostname, so moving projects silently broke every
+    // next/image render of a passport photo or office photo — the storage URLs
+    // were valid, the allow-list just no longer matched them.
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'uhbshtxafyhwigozyxkh.supabase.co',
+        hostname: new URL(
+          process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://rhqtfgrzzywoldylrcju.supabase.co'
+        ).hostname,
         pathname: '/storage/v1/object/public/**',
       },
     ],
