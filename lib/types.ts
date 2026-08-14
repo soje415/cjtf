@@ -98,6 +98,9 @@ export interface Application {
   cjtf_rank: string | null
   rank_assigned_by: string | null
   rank_assigned_at: string | null
+  // signatures printed on the ID card back, captured by ICT at issue
+  holder_signature_url: string | null
+  officer_signature_url: string | null
   cjtf_id_number: string | null
   id_card_pdf_url: string | null
   submitted_at: string | null

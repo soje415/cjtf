@@ -94,7 +94,7 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
   async function handleSkip() {
     update({ identity_verify_waived: true })
     await saveProgress({ identity_verify_waived: true })
-    toast('Verification skipped — you can continue for now.')
+    toast('Continuing without NIN/BVN — staff will verify you in person.')
   }
 
   function handleRetryVerification() {
@@ -137,10 +137,11 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
           {waived && !verified ? (
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="font-semibold text-amber-800">Verification skipped</p>
+                <p className="font-semibold text-amber-800">Continuing without NIN/BVN</p>
                 <p className="text-xs text-amber-700 mt-1">
-                  You&apos;re continuing without NIN/BVN verification. Fill in your name, date of birth and
-                  gender below yourself — staff will review this manually.
+                  Fill in your name, date of birth and gender below yourself. Bring a means of
+                  identification to the office — staff will verify you in person before your ID
+                  card is issued.
                 </p>
               </div>
               <Button type="button" variant="outline" size="sm" onClick={handleRetryVerification}>
@@ -181,7 +182,7 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
               <p className="font-semibold text-gray-800">Verify your identity</p>
               <p className="text-xs text-gray-500 mt-0.5 mb-3">
                 Enter your NIN or BVN. We confirm it against the national record and fill in your
-                details automatically. This is required to submit your application.
+                details automatically. If you don&apos;t have one, you can continue without it.
               </p>
               <div className="flex flex-col sm:flex-row gap-2">
                 <Select value={method} onValueChange={(v) => { setMethod(v as 'nin' | 'bvn'); setNumber(''); setVerifyError('') }}>
@@ -208,13 +209,22 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
                 </Button>
               </div>
               {verifyError && <p className="text-sm text-red-600 mt-2">{verifyError}</p>}
-              <button
-                type="button"
-                onClick={handleSkip}
-                className="text-xs text-gray-500 underline mt-2 hover:text-gray-700"
-              >
-                Verification service not working? Skip for now and continue.
-              </button>
+              {/* Two different people end up here: one whose verification won't
+                  go through, and one who simply has no NIN or BVN. The second
+                  case is common enough that it needs to be named, or the
+                  applicant reads the notice as "not for me" and stops. */}
+              <div className="mt-3 border-t pt-2.5 space-y-1.5">
+                <p className="text-xs text-gray-500">
+                  No NIN or BVN, or the check won&apos;t go through?
+                </p>
+                <button
+                  type="button"
+                  onClick={handleSkip}
+                  className="text-xs text-cjtf-green underline hover:text-cjtf-green-dark"
+                >
+                  Continue without verification &mdash; staff will verify you in person.
+                </button>
+              </div>
             </>
           )}
         </div>

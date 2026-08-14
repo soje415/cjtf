@@ -45,6 +45,8 @@ export default async function IdCardPage() {
       issueDate={issueDate}
       photoUrl={app.passport_photo_url ?? ''}
       pdfUrl={app.id_card_pdf_url ?? ''}
+      holderSignatureUrl={app.holder_signature_url}
+      officerSignatureUrl={app.officer_signature_url}
       verifyUrl={verifyUrl}
     />
   )

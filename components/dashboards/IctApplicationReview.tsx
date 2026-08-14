@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator'
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
 import { IdCardPreview, IdCardBackPreview } from '@/components/id-card/IdCardDownload'
 import { rankForCard } from '@/lib/ranks'
+import SignaturePad from '@/components/id-card/SignaturePad'
 import { memberVerifyUrl } from '@/lib/portal-url'
 import { captureFrontAndBackAsPdf, toDataUrl } from '@/lib/capture-pdf'
 import { toast } from 'sonner'
@@ -39,6 +40,10 @@ export default function IctApplicationReview({ application, payments, notes }: P
   const [waiveReason, setWaiveReason] = useState('')
   const [waiving, setWaiving] = useState(false)
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  // Captured at the desk, immediately before the card is generated. Held as
+  // data URLs so the capture can draw them without waiting on a round trip.
+  const [holderSig, setHolderSig] = useState<string | null>(application.holder_signature_url)
+  const [officerSig, setOfficerSig] = useState<string | null>(application.officer_signature_url)
   const cardRef = useRef<HTMLDivElement>(null)
   const backRef = useRef<HTMLDivElement>(null)
 
@@ -83,6 +88,26 @@ export default function IctApplicationReview({ application, payments, notes }: P
   async function handleGenerateId() {
     setLoading(true)
     try {
+      // 0. Persist the signatures first — the card is about to be rasterised
+      // with them on it, and a card whose PDF shows a signature the record
+      // doesn't have is worse than one with no signature at all.
+      if (holderSig?.startsWith('data:') || officerSig?.startsWith('data:')) {
+        const sigRes = await fetch(`/api/applications/${application.id}/save-signatures`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            holderSignature: holderSig?.startsWith('data:') ? holderSig : undefined,
+            officerSignature: officerSig?.startsWith('data:') ? officerSig : undefined,
+          }),
+        })
+        if (!sigRes.ok) {
+          const sd = await sigRes.json().catch(() => ({}))
+          toast.error(sd.error || 'Could not save the signatures')
+          setLoading(false)
+          return
+        }
+      }
+
       // 1. Assign CJTF ID and complete the application on the server
       const res = await fetch(`/api/applications/${application.id}/generate-id`, {
         method: 'POST',
@@ -220,10 +245,10 @@ export default function IctApplicationReview({ application, payments, notes }: P
             <div ref={backRef}>
               <IdCardBackPreview
                 cjtfId={generated.cjtfId}
-                fullName={fullName}
                 designation={rankForCard(application.cjtf_rank)}
-                bloodGroup={application.blood_group ?? undefined}
                 issueDate={issueDate}
+                holderSignatureUrl={holderSig}
+                officerSignatureUrl={officerSig}
               />
             </div>
           </div>
@@ -418,6 +443,31 @@ export default function IctApplicationReview({ application, payments, notes }: P
       )}
 
       <Separator />
+
+      {/* Signatures are collected here, at the desk, because this is the last
+          moment before the card is rasterised — after generation the PDF is
+          fixed and a missing signature means reissuing the card. */}
+      {isGenerating && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Signatures for the Card Back</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <SignaturePad
+              label="Applicant's Signature"
+              hint="Have the applicant sign in the box, or upload a scan."
+              value={holderSig}
+              onChange={setHolderSig}
+            />
+            <SignaturePad
+              label="Issuing Officer's Signature"
+              hint="Sign here, or upload your stored signature image."
+              value={officerSig}
+              onChange={setOfficerSig}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       <div className="space-y-3">
         <div className="space-y-1">

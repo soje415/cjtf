@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { PORTAL_HOST } from '@/lib/portal-url'
 
 export interface IdCardPreviewProps {
   fullName: string
@@ -21,6 +20,9 @@ export interface IdCardPreviewProps {
   /** Pre-generated QR data URL. When set, skips the internal async fetch
    * (used by capture flows so html2canvas never races the QR image). */
   qrDataUrl?: string | null
+  /** Signatures captured by ICT at issue, printed on the back. */
+  holderSignatureUrl?: string | null
+  officerSignatureUrl?: string | null
 }
 
 interface DownloadProps extends IdCardPreviewProps {
@@ -94,6 +96,27 @@ function securityPattern({ base, line, fine }: { base: string; line: number; fin
 const FRONT_PATTERN_BASE = '#e8eae9'
 const FRONT_PATTERN = securityPattern({ base: FRONT_PATTERN_BASE, line: 0.07, fine: 0.04 })
 
+/**
+ * Blood group with the rhesus sign raised, e.g. O with a small high +.
+ *
+ * Done with flex alignment rather than `vertical-align: super`, which
+ * html2canvas positions inconsistently — the sign is its own box aligned to the
+ * top of the row, so screen and print agree.
+ */
+function BloodGroupValue({ value, size }: { value: string; size: number }) {
+  const match = value.trim().match(/^(.*?)\s*([+-])$/)
+  const letters = match ? match[1] : value.trim()
+  const sign = match ? match[2] : ''
+  return (
+    <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-start', lineHeight: 1 }}>
+      <span style={{ fontSize: size, fontWeight: 800, color: C.red, lineHeight: 1.15 }}>{letters}</span>
+      {sign && (
+        <span style={{ fontSize: size * 0.55, fontWeight: 800, color: C.red, lineHeight: 1.15, marginLeft: 0.5 }}>{sign}</span>
+      )}
+    </div>
+  )
+}
+
 function SmallField({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -128,7 +151,7 @@ export function IdCardPreview({
   const expiryDate = cardExpiryDate(issueDate)
 
   // 342 × 216 px  (≈ 2× CR80)
-  const STRIPE = 15   // left stripe total width
+  const STRIPE = 21   // left stripe total width
   const CARD_W = 342
   const CARD_H = 216
   const MAIN_W = CARD_W - STRIPE
@@ -190,7 +213,7 @@ export function IdCardPreview({
               style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
           <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 8.5, fontWeight: 700, color: C.white, letterSpacing: 0.5, margin: 0 }}>
+            <p style={{ fontSize: 9.5, fontWeight: 700, color: C.white, letterSpacing: 0.5, margin: 0 }}>
               CIVILIAN JOINT TASK FORCE
             </p>
             <p style={{ fontSize: 5.5, color: C.gold, margin: '2px 0 0 0' }}>
@@ -230,13 +253,9 @@ export function IdCardPreview({
                 needs to read at a glance in an emergency, so it gets a boxed
                 red chip rather than another grey label/value pair. */}
             {bloodGroup && (
-              <div style={{
-                marginTop: 3, width: 64, textAlign: 'center',
-                border: `1.5px solid ${C.red}`, borderRadius: 3,
-                background: '#fff', padding: '1px 0 2px 0',
-              }}>
+              <div style={{ marginTop: 3, width: 64, textAlign: 'center' }}>
                 <p style={{ fontSize: 5, color: C.red, textTransform: 'uppercase', letterSpacing: 0.6, margin: 0, fontWeight: 700, lineHeight: 1.4 }}>Blood Group</p>
-                <p style={{ fontSize: 17, fontWeight: 800, color: C.red, margin: 0, lineHeight: 1.3 }}>{bloodGroup}</p>
+                <BloodGroupValue value={bloodGroup} size={19} />
               </div>
             )}
           </div>
@@ -253,11 +272,12 @@ export function IdCardPreview({
                   flex box: html2canvas measures text boxes slightly differently
                   from the browser and clips the descenders of a snug badge. */}
               <div style={{
-                background: C.green, borderRadius: 2, display: 'inline-block',
+                border: `0.6px solid rgba(0,135,81,0.35)`, borderRadius: 2, display: 'inline-block',
+                background: 'rgba(255,255,255,0.55)',
                 padding: '2.5px 6px 3.5px 6px', whiteSpace: 'nowrap',
               }}>
-                <span style={{ fontSize: 4.5, color: C.gold, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700, lineHeight: 1.4 }}>Rank&nbsp;&nbsp;</span>
-                <span style={{ fontSize: 8.5, color: C.white, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.4 }}>{designation}</span>
+                <span style={{ fontSize: 7, color: C.grey, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700, lineHeight: 1.4 }}>Rank&nbsp;&nbsp;</span>
+                <span style={{ fontSize: 8.5, color: C.green, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.4 }}>{designation}</span>
               </div>
             </div>
 
@@ -328,6 +348,25 @@ export function IdCardPreview({
 const PATTERN_BASE = '#dcdedd'
 const BACK_PATTERN = securityPattern({ base: PATTERN_BASE, line: 0.11, fine: 0.06 })
 
+/** One ruled signature line, with the captured signature sitting on it. */
+function SignatureSlot({ label, src }: { label: string; src?: string | null }) {
+  return (
+    <div style={{ flex: 1, textAlign: 'center' }}>
+      <div style={{
+        borderBottom: `1px solid ${C.grey}`, height: 13,
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+      }}>
+        {src && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={src} alt="" crossOrigin="anonymous"
+            style={{ maxWidth: '100%', maxHeight: 12.5, objectFit: 'contain', display: 'block' }} />
+        )}
+      </div>
+      <p style={{ fontSize: 4.5, color: C.grey, margin: '1px 0 0 0' }}>{label}</p>
+    </div>
+  )
+}
+
 function BackField({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
     <div>
@@ -345,11 +384,12 @@ function BackField({ label, value, accent }: { label: string; value: string; acc
 
 export interface IdCardBackPreviewProps {
   cjtfId: string
-  fullName?: string
   designation?: string
-  bloodGroup?: string
   issueDate?: string
   expiryDate?: string
+  /** Signature images (PNG data URL or public URL), captured by ICT at issue. */
+  holderSignatureUrl?: string | null
+  officerSignatureUrl?: string | null
 }
 
 // Trimmed to the three that carry legal weight. The back used to run these long
@@ -362,11 +402,12 @@ const TERMS = [
 ]
 
 export function IdCardBackPreview({
-  cjtfId, fullName, designation, bloodGroup, issueDate,
+  cjtfId, designation, issueDate,
   expiryDate = cardExpiryDate(issueDate),
+  holderSignatureUrl, officerSignatureUrl,
 }: IdCardBackPreviewProps) {
   // Same footprint as the front so the two pages line up when printed.
-  const STRIPE = 15
+  const STRIPE = 21
   const CARD_W = 342
   const CARD_H = 216
   const MAIN_W = CARD_W - STRIPE
@@ -428,24 +469,14 @@ export function IdCardBackPreview({
               width: 116, flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 2.5,
               background: 'rgba(255,255,255,0.55)', border: '0.5px solid rgba(43,43,43,0.16)', borderRadius: 3, padding: '3px 4px',
             }}>
-              {fullName && <BackField label="Holder" value={fullName} />}
+              {/* Name and blood group live on the front only — repeating them
+                  here just crowded the face that carries the conditions. */}
               {designation && <BackField label="Rank" value={designation} accent />}
               <div style={{ display: 'flex', flexDirection: 'row', gap: 6 }}>
                 {issueDate && <div style={{ flex: 1 }}><BackField label="Issued" value={issueDate} /></div>}
                 {expiryDate && <div style={{ flex: 1 }}><BackField label="Expires" value={expiryDate} /></div>}
               </div>
-
-              {/* Blood group — same red chip treatment as the front, so the
-                  value reads identically whichever face is showing. */}
-              {bloodGroup && (
-                <div style={{
-                  border: `1.2px solid ${C.red}`, borderRadius: 3, background: '#fff',
-                  padding: '1px 5px 2px 5px', alignSelf: 'flex-start', whiteSpace: 'nowrap',
-                }}>
-                  <span style={{ fontSize: 4.2, color: C.red, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700, lineHeight: 1.5 }}>Blood Group&nbsp;&nbsp;</span>
-                  <span style={{ fontSize: 12, fontWeight: 800, color: C.red, lineHeight: 1.5 }}>{bloodGroup}</span>
-                </div>
-              )}
+              <BackField label="CJTF ID" value={cjtfId} />
 
               {/* Fills what was dead space under the reference block, and puts the
                   recovery instruction on the face someone actually turns over. */}
@@ -476,8 +507,8 @@ export function IdCardBackPreview({
               <div style={{ marginTop: 'auto', paddingTop: 3 }}>
                 <p style={{ fontSize: 4, color: C.grey, textTransform: 'uppercase', letterSpacing: 0.4, margin: 0 }}>Verify This Card</p>
                 <p style={{ fontSize: 4.8, color: C.black, margin: '0.5px 0 0 0', lineHeight: 1.25 }}>
-                  Scan the QR on the front, or enter the CJTF ID below at{' '}
-                  <span style={{ fontWeight: 700, color: C.green }}>{PORTAL_HOST}/verify</span>
+                  Scan the QR code on the front of this card, or quote the CJTF ID to any
+                  CJTF office.
                 </p>
               </div>
             </div>
@@ -485,14 +516,8 @@ export function IdCardBackPreview({
 
           {/* Signature strip — compact, sits on the baseline */}
           <div style={{ display: 'flex', flexDirection: 'row', gap: 14, paddingBottom: 2 }}>
-            <div style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ borderBottom: `1px solid ${C.grey}`, height: 13 }} />
-              <p style={{ fontSize: 4.5, color: C.grey, margin: '1px 0 0 0' }}>Holder&apos;s Signature</p>
-            </div>
-            <div style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ borderBottom: `1px solid ${C.grey}`, height: 13 }} />
-              <p style={{ fontSize: 4.5, color: C.grey, margin: '1px 0 0 0' }}>Issuing Officer &amp; Stamp</p>
-            </div>
+            <SignatureSlot label="Holder&apos;s Signature" src={holderSignatureUrl} />
+            <SignatureSlot label="Issuing Officer &amp; Stamp" src={officerSignatureUrl} />
           </div>
         </div>
 
@@ -502,8 +527,8 @@ export function IdCardBackPreview({
           display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
           padding: '0 8px',
         }}>
-          <p style={{ fontSize: 4.5, color: C.white, margin: 0 }}>CJTF ID: {cjtfId}</p>
-          <p style={{ fontSize: 4.5, color: C.gold, margin: 0, fontWeight: 700 }}>{PORTAL_HOST}</p>
+          <p style={{ fontSize: 4.5, color: C.white, margin: 0 }}>This card remains the property of CJTF Nigeria.</p>
+          <p style={{ fontSize: 4.5, color: C.gold, margin: 0, fontWeight: 700 }}>CIVILIAN JOINT TASK FORCE &mdash; NIGERIA</p>
         </div>
 
         {/* BLACK BOTTOM STRIPE */}
@@ -548,10 +573,10 @@ export default function IdCardDownload(props: DownloadProps) {
             <div className="flex justify-center">
               <IdCardBackPreview
                 cjtfId={cjtfId}
-                fullName={fullName}
                 designation={props.designation}
-                bloodGroup={props.bloodGroup}
                 issueDate={props.issueDate}
+                holderSignatureUrl={props.holderSignatureUrl}
+                officerSignatureUrl={props.officerSignatureUrl}
               />
             </div>
           </div>
