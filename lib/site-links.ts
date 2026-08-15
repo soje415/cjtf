@@ -3,4 +3,4 @@
 // portal only handles the logged-in work. Override with NEXT_PUBLIC_WEBSITE_URL
 // when the site moves to its own domain.
 export const WEBSITE_URL =
-  process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://cjtf-national-website.pages.dev'
+  process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://cjtfnigeria.com'

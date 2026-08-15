@@ -7,7 +7,7 @@
 // this module refuses both cases and falls back to production instead.
 //
 // Keep in sync with PORTAL_URL in the public website (cjtf-website/src/site.config.ts).
-const PRODUCTION_PORTAL_URL = 'https://cjtf.vercel.app'
+const PRODUCTION_PORTAL_URL = 'https://portal.cjtfnigeria.com'
 
 function resolvePortalUrl(): string {
   const raw = (process.env.NEXT_PUBLIC_APP_URL ?? '').trim().replace(/\/+$/, '')

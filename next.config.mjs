@@ -1,7 +1,7 @@
 // Kept in sync with lib/site-links.ts, which can't be imported here (this config
 // is loaded outside the module graph that resolves the `@/` alias).
 const WEBSITE_URL =
-  process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://cjtf-national-website.pages.dev'
+  process.env.NEXT_PUBLIC_WEBSITE_URL || 'https://cjtfnigeria.com'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
