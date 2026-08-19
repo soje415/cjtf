@@ -62,6 +62,10 @@ export type FormData = {
   birth_cert_url: string
   guarantor_form_url: string
   age_declaration_url: string
+  self_reported_rank: string
+  legacy_id_number: string
+  vouching_officer_name: string
+  vouching_doc_url: string
 }
 
 const EMPTY_FORM: FormData = {
@@ -76,14 +80,17 @@ const EMPTY_FORM: FormData = {
   nin: '', identity_verified: false, identity_verify_method: '', identity_verify_waived: false,
   passport_photo_url: '', id_document_url: '', birth_cert_url: '',
   guarantor_form_url: '', age_declaration_url: '',
+  self_reported_rank: '', legacy_id_number: '', vouching_officer_name: '', vouching_doc_url: '',
 }
 
 export default function ApplicationForm({
   existingApplication,
   userId,
+  membershipType,
 }: {
   existingApplication: Application | null
   userId: string
+  membershipType: 'new' | 'legacy'
 }) {
   const router = useRouter()
   const [step, setStep] = useState(0)
@@ -135,6 +142,10 @@ export default function ApplicationForm({
       birth_cert_url: existingApplication.birth_cert_url ?? '',
       guarantor_form_url: existingApplication.guarantor_form_url ?? '',
       age_declaration_url: existingApplication.age_declaration_url ?? '',
+      self_reported_rank: existingApplication.self_reported_rank ?? '',
+      legacy_id_number: existingApplication.legacy_id_number ?? '',
+      vouching_officer_name: existingApplication.vouching_officer_name ?? '',
+      vouching_doc_url: existingApplication.vouching_doc_url ?? '',
     } : {}),
   })
 
@@ -147,7 +158,11 @@ export default function ApplicationForm({
   async function ensureAppId(): Promise<string | null> {
     if (appId) return appId
     try {
-      const res = await fetch('/api/applications', { method: 'POST' })
+      const res = await fetch('/api/applications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ membershipType }),
+      })
       const json = await res.json()
       const id = json.application?.id ?? null
       if (id) setAppId(id)
@@ -166,7 +181,11 @@ export default function ApplicationForm({
       let id = appId
       if (!id) {
         // Create the DRAFT application row first
-        const res = await fetch('/api/applications', { method: 'POST' })
+        const res = await fetch('/api/applications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ membershipType }),
+        })
         const json = await res.json()
         id = json.application?.id ?? null
         if (id) setAppId(id)
@@ -235,9 +254,9 @@ export default function ApplicationForm({
 
       {step === 0 && <Step1Personal {...stepProps} appId={appId} ensureAppId={ensureAppId} onNext={() => setStep(1)} />}
       {step === 1 && <Step2Contact {...stepProps} onNext={() => setStep(2)} onBack={() => setStep(0)} />}
-      {step === 2 && <Step3NextOfKin {...stepProps} onNext={() => setStep(3)} onBack={() => setStep(1)} />}
-      {step === 3 && <Step4Documents {...stepProps} userId={userId} appId={appId} onNext={() => setStep(4)} onBack={() => setStep(2)} />}
-      {step === 4 && <Step5Review {...stepProps} appId={appId} onBack={() => setStep(3)} onSubmit={handleSubmit} />}
+      {step === 2 && <Step3NextOfKin {...stepProps} membershipType={membershipType} onNext={() => setStep(3)} onBack={() => setStep(1)} />}
+      {step === 3 && <Step4Documents {...stepProps} membershipType={membershipType} userId={userId} appId={appId} onNext={() => setStep(4)} onBack={() => setStep(2)} />}
+      {step === 4 && <Step5Review {...stepProps} membershipType={membershipType} appId={appId} onBack={() => setStep(3)} onSubmit={handleSubmit} />}
     </div>
   )
 }

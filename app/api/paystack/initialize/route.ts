@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { initializeTransaction } from '@/lib/paystack'
-import { REGISTRATION_FEE_KOBO } from '@/lib/fees'
+import { feeForMembershipType } from '@/lib/fees'
 import { randomBytes } from 'crypto'
 function nanoid(len: number) { return randomBytes(len).toString('hex').slice(0, len).toUpperCase() }
 
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   const service = createServiceClient()
   const { data: app } = await service
     .from('applications')
-    .select('id, status, email')
+    .select('id, status, email, membership_type')
     .eq('id', applicationId)
     .eq('applicant_id', user.id)
     .single()
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
 
   if (existing) return NextResponse.json({ error: 'Already paid' }, { status: 400 })
 
-  const amount = REGISTRATION_FEE_KOBO
+  const amount = feeForMembershipType(app.membership_type)
 
   const reference = `CJTF-${type.toUpperCase()}-${nanoid(10).toUpperCase()}`
 
@@ -66,5 +66,5 @@ export async function POST(req: Request) {
     status: 'pending',
   })
 
-  return NextResponse.json({ reference, access_code: tx.access_code })
+  return NextResponse.json({ reference, access_code: tx.access_code, amount })
 }

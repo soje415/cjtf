@@ -15,6 +15,11 @@ import { REGISTRATION_FEE_KOBO, formatNaira } from '@/lib/fees'
  * Hyparrow virtual account (see VirtualAccountPayment). Kept as the card-payment
  * path and updated alongside the fee change so it can't drift out of sync with
  * what the rest of the portal charges.
+ *
+ * NOTE: still imports the flat REGISTRATION_FEE_KOBO below, so it charges the
+ * full new-applicant fee regardless of membership_type. If this is ever wired
+ * up, source the amount from the /api/paystack/initialize response instead
+ * (that route now returns `amount`, already tier-aware) rather than this constant.
  */
 interface Props {
   applicationId: string

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { creditVirtualAccountPayment } from '@/lib/notifications'
-import { REGISTRATION_FEE_KOBO, paymentBypassEnabled } from '@/lib/fees'
+import { feeForMembershipType, paymentBypassEnabled } from '@/lib/fees'
 
 
 /**
@@ -26,7 +26,7 @@ export async function POST() {
   const service = createServiceClient()
   const { data: app } = await service
     .from('applications')
-    .select('id, applicant_id, status')
+    .select('id, applicant_id, status, membership_type')
     .eq('applicant_id', user.id)
     .maybeSingle()
 
@@ -34,8 +34,8 @@ export async function POST() {
   if (app.status !== 'PENDING_PAYMENT') return NextResponse.json({ paid: true })
 
   const result = await creditVirtualAccountPayment(service, {
-    application: { id: app.id, applicant_id: app.applicant_id },
-    amountKobo: REGISTRATION_FEE_KOBO,
+    application: { id: app.id, applicant_id: app.applicant_id, membership_type: app.membership_type },
+    amountKobo: feeForMembershipType(app.membership_type),
     reference: `SIM-${Date.now()}`,
   })
 

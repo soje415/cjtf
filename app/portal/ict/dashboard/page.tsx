@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { LinkButton } from '@/components/ui/link-button'
-import { STATUS_LABELS, STATUS_COLORS, Application } from '@/lib/types'
+import { STATUS_LABELS, STATUS_COLORS, MEMBERSHIP_TYPE_LABELS, MEMBERSHIP_TYPE_COLORS, Application } from '@/lib/types'
 
 export default async function IctDashboard() {
   const supabase = createClient()
@@ -134,7 +134,10 @@ function ApplicationTable({ title, apps, actionLabel }: { title: string; apps: A
                   <td className="py-2 pr-4 font-medium">{app.first_name} {app.last_name}</td>
                   <td className="py-2 pr-4 text-gray-600">{app.state_of_origin} / {app.lga_of_origin}</td>
                   <td className="py-2 pr-4">
-                    <Badge className={STATUS_COLORS[app.status]}>{STATUS_LABELS[app.status]}</Badge>
+                    <div className="flex gap-1.5 flex-wrap">
+                      <Badge className={MEMBERSHIP_TYPE_COLORS[app.membership_type]}>{MEMBERSHIP_TYPE_LABELS[app.membership_type]}</Badge>
+                      <Badge className={STATUS_COLORS[app.status]}>{STATUS_LABELS[app.status]}</Badge>
+                    </div>
                   </td>
                   <td className="py-2 pr-4 text-gray-500">
                     {app.submitted_at ? new Date(app.submitted_at).toLocaleDateString('en-NG') : '—'}

@@ -10,6 +10,7 @@ interface Props {
   update: (f: Partial<FormData>) => void
   saveProgress: (f: Partial<FormData>) => Promise<void>
   saving: boolean
+  membershipType: 'new' | 'legacy'
   appId: string | null
   onBack: () => void
   onSubmit: () => Promise<void>
@@ -24,7 +25,7 @@ function Row({ label, value }: { label: string; value: string }) {
   )
 }
 
-export default function Step5Review({ form, saving, onBack, onSubmit }: Props) {
+export default function Step5Review({ form, saving, membershipType, onBack, onSubmit }: Props) {
   return (
     <Card>
       <CardContent className="p-6 space-y-4">
@@ -80,6 +81,19 @@ export default function Step5Review({ form, saving, onBack, onSubmit }: Props) {
           <Row label="Title / Position" value={form.guarantor_title} />
           <Row label="Address" value={form.guarantor_address} />
         </div>
+
+        {membershipType === 'legacy' && (
+          <>
+            <Separator />
+            <div>
+              <p className="text-xs font-semibold text-cjtf-green uppercase tracking-wide mb-1">Existing Membership</p>
+              <Row label="Current Rank" value={form.self_reported_rank} />
+              <Row label="Old CJTF ID / Rank Card No." value={form.legacy_id_number} />
+              <Row label="Vouching Officer" value={form.vouching_officer_name} />
+              <Row label="Vouching Note" value={form.vouching_doc_url ? '✓ Uploaded' : '✗ Missing'} />
+            </div>
+          </>
+        )}
 
         <Separator />
 

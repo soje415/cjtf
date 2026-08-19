@@ -10,7 +10,7 @@ import { ApplicationStatus, STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
 // applicant as if they were still on step one — PENDING_PAYMENT used to be
 // absent, so anyone who had submitted and owed the fee was shown "Fill
 // Application" as their current step, reading as though their submission was lost.
-const STEPS: { status: ApplicationStatus; label: string }[] = [
+const STEPS_NEW: { status: ApplicationStatus; label: string }[] = [
   { status: 'DRAFT', label: 'Fill Application' },
   { status: 'PENDING_PAYMENT', label: 'Pay Registration Fee' },
   { status: 'PENDING_ICT_VERIFICATION', label: 'ICT Verification' },
@@ -21,12 +21,14 @@ const STEPS: { status: ApplicationStatus; label: string }[] = [
   { status: 'COMPLETED', label: 'Completed' },
 ]
 
+// Legacy members skip INT screening entirely (see app/api/applications/[id]/forward),
+// so their stepper never shows that stage.
+const STEPS_LEGACY = STEPS_NEW.filter((s) => s.status !== 'PENDING_INT_SCREENING')
+
 const REJECTER_LABEL: Record<string, string> = { int: 'Intelligence', admin: 'Command' }
 
-const STATUS_ORDER = STEPS.map((s) => s.status)
-
-function getStepIndex(status: ApplicationStatus) {
-  const i = STATUS_ORDER.indexOf(status)
+function getStepIndex(steps: { status: ApplicationStatus; label: string }[], status: ApplicationStatus) {
+  const i = steps.findIndex((s) => s.status === status)
   return i === -1 ? 0 : i
 }
 
@@ -51,7 +53,8 @@ export default async function ApplicantDashboard() {
     .maybeSingle()
 
   const phoneVerified = profile?.phone_verified ?? false
-  const currentStep = app ? getStepIndex(app.status as ApplicationStatus) : 0
+  const steps = app?.membership_type === 'legacy' ? STEPS_LEGACY : STEPS_NEW
+  const currentStep = app ? getStepIndex(steps, app.status as ApplicationStatus) : 0
   const isRejected = app?.status === 'REJECTED'
   const isCompleted = app?.status === 'COMPLETED'
 
@@ -108,7 +111,7 @@ export default async function ApplicantDashboard() {
               </div>
             ) : (
               <div className="space-y-2 mt-2">
-                {STEPS.map((step, i) => (
+                {steps.map((step, i) => (
                   <div key={step.status} className="flex items-center gap-3">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
                       i < currentStep ? 'bg-cjtf-green text-white' :

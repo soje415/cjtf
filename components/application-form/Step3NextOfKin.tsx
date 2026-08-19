@@ -5,21 +5,26 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { CJTF_RANKS } from '@/lib/ranks'
 
 interface Props {
   form: FormData
   update: (f: Partial<FormData>) => void
   saveProgress: (f: Partial<FormData>) => Promise<void>
   saving: boolean
+  membershipType: 'new' | 'legacy'
   onNext: () => void
   onBack: () => void
 }
 
-export default function Step3NextOfKin({ form, update, saveProgress, saving, onNext, onBack }: Props) {
+export default function Step3NextOfKin({ form, update, saveProgress, saving, membershipType, onNext, onBack }: Props) {
   async function handleNext() {
     await saveProgress({})
     onNext()
   }
+
+  const isLegacy = membershipType === 'legacy'
 
   const valid =
     form.next_of_kin_name &&
@@ -29,7 +34,8 @@ export default function Step3NextOfKin({ form, update, saveProgress, saving, onN
     form.guarantor_name &&
     form.guarantor_phone &&
     form.guarantor_title &&
-    form.guarantor_address
+    form.guarantor_address &&
+    (!isLegacy || (form.self_reported_rank && form.vouching_officer_name))
 
   return (
     <Card>
@@ -85,6 +91,39 @@ export default function Step3NextOfKin({ form, update, saveProgress, saving, onN
             </div>
           </div>
         </div>
+
+        {isLegacy && (
+          <div className="space-y-4 border-t pt-4">
+            <p className="text-sm font-semibold text-cjtf-green uppercase tracking-wide">Existing Membership</p>
+            <p className="text-xs text-gray-500">
+              Since you&apos;re already a serving member, tell us your current rank and who at your unit can vouch for you —
+              ICT and Command will cross-check this against unit records.
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label>Current Rank *</Label>
+                <Select value={form.self_reported_rank} onValueChange={(v) => update({ self_reported_rank: v ?? '' })}>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Select your rank" /></SelectTrigger>
+                  <SelectContent>
+                    {CJTF_RANKS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Old CJTF ID / Rank Card Number</Label>
+                <Input value={form.legacy_id_number} onChange={(e) => update({ legacy_id_number: e.target.value })} placeholder="If you have one" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Vouching Officer *</Label>
+              <Input
+                value={form.vouching_officer_name}
+                onChange={(e) => update({ vouching_officer_name: e.target.value })}
+                placeholder="Name of the unit/office head who can confirm your membership"
+              />
+            </div>
+          </div>
+        )}
 
         <div className="flex justify-between pt-2">
           <Button variant="outline" onClick={onBack}>← Back</Button>

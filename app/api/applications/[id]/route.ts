@@ -54,6 +54,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     'guarantor_name','guarantor_phone','guarantor_title','guarantor_address',
     'passport_photo_url','id_document_url','birth_cert_url',
     'guarantor_form_url','age_declaration_url',
+    // legacy-member capture fields. membership_type itself is deliberately
+    // NOT here — it's set once at creation (see app/api/applications POST)
+    // and must stay immutable, otherwise an applicant could create as 'new'
+    // and flip to 'legacy' right before paying to dodge the full fee.
+    'self_reported_rank','legacy_id_number','vouching_officer_name','vouching_doc_url',
   ]
   const updates: Record<string, unknown> = {}
   for (const key of allowed) {
@@ -86,7 +91,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const service = createServiceClient()
   const { data: app } = await service
     .from('applications')
-    .select('applicant_id, status, first_name, last_name, phone_number, passport_photo_url, rejected_by_role, identity_verified, identity_verify_waived')
+    .select('applicant_id, status, membership_type, first_name, last_name, phone_number, passport_photo_url, rejected_by_role, identity_verified, identity_verify_waived, self_reported_rank, vouching_officer_name')
     .eq('id', params.id)
     .single()
 
@@ -99,6 +104,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   const required = ['first_name','last_name','phone_number','passport_photo_url']
+  if (app.membership_type === 'legacy') {
+    required.push('self_reported_rank', 'vouching_officer_name')
+  }
   for (const field of required) {
     if (!app[field as keyof typeof app]) {
       return NextResponse.json({ error: `Missing required field: ${field}` }, { status: 400 })

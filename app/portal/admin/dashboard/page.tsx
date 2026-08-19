@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { LinkButton } from '@/components/ui/link-button'
-import { Application, STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
+import { Application, STATUS_LABELS, STATUS_COLORS, MEMBERSHIP_TYPE_LABELS, MEMBERSHIP_TYPE_COLORS } from '@/lib/types'
 import CreateExecutiveForm from '@/components/dashboards/CreateExecutiveForm'
 import TrainingQueueTable from '@/components/dashboards/TrainingQueueTable'
 
@@ -17,11 +17,15 @@ export default async function AdminDashboard() {
   const { data: profile } = await service.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'admin') redirect('/auth/login')
 
+  // Ordered by updated_at, not int_cleared_at: legacy members skip INT
+  // screening entirely, so int_cleared_at is always null for them, which
+  // would otherwise sort them behind every INT-cleared row regardless of
+  // actual queue-entry time.
   const { data: pending } = await service
     .from('applications')
     .select('*')
     .eq('status', 'PENDING_ADMIN_APPROVAL')
-    .order('int_cleared_at', { ascending: true })
+    .order('updated_at', { ascending: true })
 
   const { data: training } = await service
     .from('applications')
@@ -109,7 +113,10 @@ export default async function AdminDashboard() {
                       <td className="py-2 pr-4 font-medium">{app.first_name} {app.last_name}</td>
                       <td className="py-2 pr-4 text-gray-600">{app.state_of_origin} / {app.lga_of_origin}</td>
                       <td className="py-2 pr-4">
-                        <Badge className={STATUS_COLORS[app.status]}>{STATUS_LABELS[app.status]}</Badge>
+                        <div className="flex gap-1.5 flex-wrap">
+                          <Badge className={MEMBERSHIP_TYPE_COLORS[app.membership_type]}>{MEMBERSHIP_TYPE_LABELS[app.membership_type]}</Badge>
+                          <Badge className={STATUS_COLORS[app.status]}>{STATUS_LABELS[app.status]}</Badge>
+                        </div>
                       </td>
                       <td className="py-2 pr-4 text-gray-500">
                         {app.int_cleared_at ? new Date(app.int_cleared_at).toLocaleDateString('en-NG') : '—'}

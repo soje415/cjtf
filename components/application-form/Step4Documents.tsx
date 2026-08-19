@@ -12,6 +12,7 @@ interface Props {
   update: (f: Partial<FormData>) => void
   saveProgress: (f: Partial<FormData>) => Promise<void>
   saving: boolean
+  membershipType: 'new' | 'legacy'
   userId: string
   appId: string | null
   onNext: () => void
@@ -24,8 +25,9 @@ type DocField =
   | 'birth_cert_url'
   | 'guarantor_form_url'
   | 'age_declaration_url'
+  | 'vouching_doc_url'
 
-const DOCS: { field: DocField; label: string; accept: string; required?: boolean }[] = [
+const BASE_DOCS: { field: DocField; label: string; accept: string; required?: boolean }[] = [
   { field: 'passport_photo_url', label: 'Passport Photograph', accept: 'image/*', required: true },
   { field: 'id_document_url', label: 'National ID / Voter Card / NIN Slip', accept: 'image/*,.pdf' },
   { field: 'birth_cert_url', label: 'Birth Certificate', accept: 'image/*,.pdf' },
@@ -33,8 +35,16 @@ const DOCS: { field: DocField; label: string; accept: string; required?: boolean
   { field: 'guarantor_form_url', label: 'Signed Guarantor Form', accept: 'image/*,.pdf', required: true },
 ]
 
-export default function Step4Documents({ form, update, saveProgress, saving, appId, onNext, onBack }: Props) {
+const LEGACY_DOC: { field: DocField; label: string; accept: string; required?: boolean } = {
+  field: 'vouching_doc_url',
+  label: 'Signed Vouching Note (from your unit/office head)',
+  accept: 'image/*,.pdf',
+  required: true,
+}
+
+export default function Step4Documents({ form, update, saveProgress, saving, membershipType, appId, onNext, onBack }: Props) {
   const [uploading, setUploading] = useState<DocField | null>(null)
+  const DOCS = membershipType === 'legacy' ? [...BASE_DOCS, LEGACY_DOC] : BASE_DOCS
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>, field: DocField) {
     const file = e.target.files?.[0]

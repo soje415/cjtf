@@ -91,13 +91,13 @@ export async function POST(req: Request) {
   // registration. Match on the account number we persisted at VA creation.
   const { data: app } = await service
     .from('applications')
-    .select('id, applicant_id')
+    .select('id, applicant_id, membership_type')
     .eq('va_account_number', accountNumber)
     .maybeSingle()
 
   if (app) {
     await creditVirtualAccountPayment(service, {
-      application: { id: app.id, applicant_id: app.applicant_id },
+      application: { id: app.id, applicant_id: app.applicant_id, membership_type: app.membership_type },
       amountKobo,
       reference,
     })

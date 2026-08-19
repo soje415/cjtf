@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
 
-export async function POST() {
+export async function POST(req: Request) {
   const supabase = createClient()
   const { data: { session: _session } } = await supabase.auth.getSession()
   const user = _session?.user
@@ -20,9 +20,15 @@ export async function POST() {
 
   if (existing) return NextResponse.json({ application: existing })
 
+  // membership_type is only ever set here, at creation — never patchable
+  // afterward (see the PATCH allowlist in [id]/route.ts), so an applicant
+  // can't create as 'new' and flip to 'legacy' to dodge the full fee.
+  const body = await req.json().catch(() => ({}))
+  const membershipType = body?.membershipType === 'legacy' ? 'legacy' : 'new'
+
   const { data, error } = await service
     .from('applications')
-    .insert({ applicant_id: user.id, status: 'DRAFT', email: user.email })
+    .insert({ applicant_id: user.id, status: 'DRAFT', email: user.email, membership_type: membershipType })
     .select()
     .single()
 

@@ -14,24 +14,27 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const { data: profile } = await service.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'ict') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { data: app } = await service.from('applications').select('id, status').eq('id', params.id).single()
+  const { data: app } = await service
+    .from('applications')
+    .select('id, status, membership_type, first_name, last_name')
+    .eq('id', params.id)
+    .single()
   if (!app || app.status !== 'PENDING_ICT_VERIFICATION') {
     return NextResponse.json({ error: 'Invalid application state' }, { status: 400 })
   }
 
-  const { data: appInfo } = await service
-    .from('applications')
-    .select('first_name, last_name')
-    .eq('id', params.id)
-    .single()
+  // Legacy members are already vetted — skip INT screening and go straight
+  // to Admin approval. New recruits still go through Intelligence.
+  const isLegacy = app.membership_type === 'legacy'
+  const targetStatus = isLegacy ? 'PENDING_ADMIN_APPROVAL' : 'PENDING_INT_SCREENING'
 
   // Guard the write on the status we validated above, not just the id. Without
   // it, two quick clicks both pass the check and both write, duplicating the
-  // audit note and firing a second SMS blast to every INT officer.
+  // audit note and firing a second SMS blast to every officer downstream.
   const { data: moved } = await service
     .from('applications')
     .update({
-      status: 'PENDING_INT_SCREENING',
+      status: targetStatus,
       ict_verified_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
@@ -51,12 +54,18 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     })
   }
 
-  // Notify all INT officers
-  const { data: intOfficers } = await service.from('profiles').select('phone').eq('role', 'int')
-  const intPhones = (intOfficers ?? []).map((p) => p.phone).filter(Boolean) as string[]
+  // Notify the next stage: Admin directly for legacy members (INT is skipped),
+  // INT officers otherwise.
+  const { data: nextOfficers } = await service
+    .from('profiles')
+    .select('phone')
+    .eq('role', isLegacy ? 'admin' : 'int')
+  const nextPhones = (nextOfficers ?? []).map((p) => p.phone).filter(Boolean) as string[]
   await sendSms(
-    intPhones,
-    `CJTF Portal: Application from ${appInfo?.first_name} ${appInfo?.last_name} has been verified by ICT and is ready for Intelligence screening.`
+    nextPhones,
+    isLegacy
+      ? `CJTF Portal: Legacy member ${app.first_name} ${app.last_name} has been verified by ICT and is ready for Command approval.`
+      : `CJTF Portal: Application from ${app.first_name} ${app.last_name} has been verified by ICT and is ready for Intelligence screening.`
   )
 
   return NextResponse.json({ ok: true })

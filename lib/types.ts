@@ -11,6 +11,11 @@ export type ApplicationStatus =
   | 'COMPLETED'
   | 'REJECTED'
 
+// 'legacy' applicants are already-recognised CJTF members being digitised
+// into the portal — they pay a reduced fee and skip PENDING_INT_SCREENING
+// entirely (see app/api/applications/[id]/forward/route.ts).
+export type MembershipType = 'new' | 'legacy'
+
 // 'id_card' and 'training' are legacy: applicants now pay one 'registration' fee.
 export type PaymentType = 'registration' | 'office' | 'id_card' | 'training'
 export type PaymentStatus = 'pending' | 'success' | 'failed'
@@ -41,6 +46,7 @@ export interface Application {
   id: string
   applicant_id: string
   status: ApplicationStatus
+  membership_type: MembershipType
   first_name: string
   last_name: string
   middle_name: string | null
@@ -98,6 +104,12 @@ export interface Application {
   cjtf_rank: string | null
   rank_assigned_by: string | null
   rank_assigned_at: string | null
+  // legacy-member capture: self-reported at intake, cross-checked by
+  // ICT/Admin against physical unit records at their existing review steps
+  self_reported_rank: string | null
+  legacy_id_number: string | null
+  vouching_officer_name: string | null
+  vouching_doc_url: string | null
   // signatures printed on the ID card back, captured by ICT at issue
   holder_signature_url: string | null
   officer_signature_url: string | null
@@ -162,6 +174,16 @@ export const STATUS_COLORS: Record<ApplicationStatus, string> = {
   APPROVED_GENERATING_ID: 'bg-teal-100 text-teal-800',
   COMPLETED: 'bg-green-100 text-green-800',
   REJECTED: 'bg-red-100 text-red-800',
+}
+
+export const MEMBERSHIP_TYPE_LABELS: Record<MembershipType, string> = {
+  new: 'New Recruit',
+  legacy: 'Legacy Member',
+}
+
+export const MEMBERSHIP_TYPE_COLORS: Record<MembershipType, string> = {
+  new: 'bg-gray-100 text-gray-700',
+  legacy: 'bg-amber-100 text-amber-800',
 }
 
 // ============================================================

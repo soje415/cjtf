@@ -1,6 +1,7 @@
 import type { createServiceClient } from '@/lib/supabase/server'
 import { sendSms } from '@/lib/termii'
-import { REGISTRATION_FEE_KOBO, OFFICE_FEE_KOBO } from '@/lib/fees'
+import { OFFICE_FEE_KOBO, feeForMembershipType } from '@/lib/fees'
+import type { MembershipType } from '@/lib/types'
 
 type ServiceClient = ReturnType<typeof createServiceClient>
 
@@ -16,12 +17,17 @@ type ServiceClient = ReturnType<typeof createServiceClient>
  */
 export async function creditVirtualAccountPayment(
   service: ServiceClient,
-  params: { application: { id: string; applicant_id: string }; amountKobo: number; reference: string }
+  params: {
+    application: { id: string; applicant_id: string; membership_type: MembershipType }
+    amountKobo: number
+    reference: string
+  }
 ): Promise<{ credited: boolean; advanced: boolean }> {
   const { application, amountKobo, reference } = params
+  const fee = feeForMembershipType(application.membership_type)
 
   // Underpayment: don't clear the fee. The persistent VA can receive a top-up later.
-  if (amountKobo < REGISTRATION_FEE_KOBO) {
+  if (amountKobo < fee) {
     return { credited: false, advanced: false }
   }
 
@@ -32,7 +38,7 @@ export async function creditVirtualAccountPayment(
         application_id: application.id,
         applicant_id: application.applicant_id,
         type: 'registration',
-        amount: REGISTRATION_FEE_KOBO,
+        amount: fee,
         paystack_reference: `HYP-${reference}-REGISTRATION`,
         status: 'success',
         paid_at: new Date().toISOString(),

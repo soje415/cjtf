@@ -23,6 +23,19 @@ export const REGISTRATION_FEE_KOBO = Number(
 /** One registration fee per CJTF office — ₦10,000. */
 export const OFFICE_FEE_KOBO = Number(process.env.NEXT_PUBLIC_OFFICE_FEE_KOBO ?? 1_000_000)
 
+/**
+ * Reduced fee for already-recognised members being digitised into the portal
+ * — ₦3,000, just for the ID card, since they skip INT screening entirely.
+ */
+export const LEGACY_REGISTRATION_FEE_KOBO = Number(
+  process.env.NEXT_PUBLIC_LEGACY_REGISTRATION_FEE_KOBO ?? 300_000
+)
+
+/** Which registration fee applies to a given applicant. */
+export function feeForMembershipType(type: 'new' | 'legacy'): number {
+  return type === 'legacy' ? LEGACY_REGISTRATION_FEE_KOBO : REGISTRATION_FEE_KOBO
+}
+
 /** Render a kobo amount as naira for display: 500000 -> "₦5,000". */
 export function formatNaira(kobo: number): string {
   return `₦${(kobo / 100).toLocaleString('en-NG')}`

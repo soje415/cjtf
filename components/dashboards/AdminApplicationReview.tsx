@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
+import { STATUS_LABELS, STATUS_COLORS, MEMBERSHIP_TYPE_LABELS, MEMBERSHIP_TYPE_COLORS } from '@/lib/types'
 import { CJTF_RANKS, DEFAULT_RECOMMENDED_RANK, type CjtfRank } from '@/lib/ranks'
 import { toast } from 'sonner'
 
@@ -25,11 +25,13 @@ interface Props {
 export default function AdminApplicationReview({ application, payments, notes }: Props) {
   const router = useRouter()
   const [note, setNote] = useState('')
-  // Prefilled with INT's recommendation so approving with it is one click and
+  const isLegacy = application.membership_type === 'legacy'
+  // Prefilled with INT's recommendation (or, for legacy members who skip INT,
+  // their own self-reported rank) so approving with it is one click and
   // overriding is a deliberate act.
   const [rank, setRank] = useState<CjtfRank>(
     (application.cjtf_rank as CjtfRank | null)
-      ?? (application.recommended_rank as CjtfRank | null)
+      ?? ((isLegacy ? application.self_reported_rank : application.recommended_rank) as CjtfRank | null)
       ?? DEFAULT_RECOMMENDED_RANK
   )
   const [loading, setLoading] = useState<'approve' | 'reject' | null>(null)
@@ -89,7 +91,12 @@ export default function AdminApplicationReview({ application, payments, notes }:
           <h1 className="text-xl font-bold text-gray-800">{application.first_name} {application.last_name}</h1>
           <p className="text-sm text-gray-500">Admin Final Review</p>
         </div>
-        <Badge className={STATUS_COLORS[application.status]}>{STATUS_LABELS[application.status]}</Badge>
+        <div className="flex gap-2">
+          <Badge className={MEMBERSHIP_TYPE_COLORS[application.membership_type]}>
+            {MEMBERSHIP_TYPE_LABELS[application.membership_type]}
+          </Badge>
+          <Badge className={STATUS_COLORS[application.status]}>{STATUS_LABELS[application.status]}</Badge>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -162,6 +169,38 @@ export default function AdminApplicationReview({ application, payments, notes }:
         </CardContent>
       </Card>
 
+      {isLegacy && (
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Existing Membership Claim</CardTitle></CardHeader>
+          <CardContent className="text-sm space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <p className="text-gray-500 text-xs">Self-Reported Rank</p>
+                <p className="font-medium">{application.self_reported_rank || '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs">Old CJTF ID / Rank Card No.</p>
+                <p className="font-medium">{application.legacy_id_number || '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs">Vouching Officer</p>
+                <p className="font-medium">{application.vouching_officer_name || '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs">Vouching Note</p>
+                {application.vouching_doc_url ? (
+                  <a href={application.vouching_doc_url} target="_blank" rel="noreferrer" className="font-medium text-cjtf-green underline">
+                    View document
+                  </a>
+                ) : (
+                  <p className="font-medium">Not provided</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {payments.length > 0 && (
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm">Payment Records</CardTitle></CardHeader>
@@ -203,9 +242,15 @@ export default function AdminApplicationReview({ application, payments, notes }:
             </SelectContent>
           </Select>
           <p className="text-xs text-gray-400">
-            {application.recommended_rank
-              ? <>Intelligence recommended <span className="font-semibold text-purple-700">{application.recommended_rank}</span>. Command&apos;s choice here is what prints on the ID card.</>
-              : <>No rank was recommended by Intelligence. This is what prints on the ID card.</>}
+            {isLegacy ? (
+              application.self_reported_rank
+                ? <>Applicant self-reported <span className="font-semibold text-amber-700">{application.self_reported_rank}</span> (legacy member, unverified by Intelligence). Command&apos;s choice here is what prints on the ID card.</>
+                : <>No rank was self-reported. This is what prints on the ID card.</>
+            ) : application.recommended_rank ? (
+              <>Intelligence recommended <span className="font-semibold text-purple-700">{application.recommended_rank}</span>. Command&apos;s choice here is what prints on the ID card.</>
+            ) : (
+              <>No rank was recommended by Intelligence. This is what prints on the ID card.</>
+            )}
           </p>
         </div>
         <div className="space-y-1">

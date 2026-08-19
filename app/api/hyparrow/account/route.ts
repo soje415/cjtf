@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { createCustomer, createVirtualAccount, findCustomer, type VirtualAccount } from '@/lib/hyparrow-pay'
-import { REGISTRATION_FEE_KOBO } from '@/lib/fees'
+import { feeForMembershipType } from '@/lib/fees'
 
 // Hyparrow expects a provider NAME here, not a numeric CBN/NIP code. Passing a
 // numeric code surfaces as "interswitch VA creation failed". Use WEMA (default).
@@ -21,14 +21,14 @@ export async function POST() {
   const { data: app } = await service
     .from('applications')
     .select(
-      'id, status, applicant_id, first_name, last_name, middle_name, email, phone_number, date_of_birth, hyparrow_customer_id, va_account_number, va_account_name, va_bank_name'
+      'id, status, applicant_id, membership_type, first_name, last_name, middle_name, email, phone_number, date_of_birth, hyparrow_customer_id, va_account_number, va_account_name, va_bank_name'
     )
     .eq('applicant_id', user.id)
     .maybeSingle()
 
   if (!app) return NextResponse.json({ error: 'No application found' }, { status: 404 })
 
-  const amount = REGISTRATION_FEE_KOBO
+  const amount = feeForMembershipType(app.membership_type)
 
   // Once payment has been received the application leaves PENDING_PAYMENT.
   const paid = app.status !== 'PENDING_PAYMENT'

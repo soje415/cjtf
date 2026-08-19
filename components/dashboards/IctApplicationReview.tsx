@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
+import { STATUS_LABELS, STATUS_COLORS, MEMBERSHIP_TYPE_LABELS, MEMBERSHIP_TYPE_COLORS } from '@/lib/types'
 import { IdCardPreview, IdCardBackPreview } from '@/components/id-card/IdCardDownload'
 import { rankForCard } from '@/lib/ranks'
 import SignaturePad from '@/components/id-card/SignaturePad'
@@ -300,7 +300,12 @@ export default function IctApplicationReview({ application, payments, notes }: P
           </h1>
           <p className="text-sm text-gray-500">Application Review — ICT</p>
         </div>
-        <Badge className={STATUS_COLORS[application.status]}>{STATUS_LABELS[application.status]}</Badge>
+        <div className="flex gap-2">
+          <Badge className={MEMBERSHIP_TYPE_COLORS[application.membership_type]}>
+            {MEMBERSHIP_TYPE_LABELS[application.membership_type]}
+          </Badge>
+          <Badge className={STATUS_COLORS[application.status]}>{STATUS_LABELS[application.status]}</Badge>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -337,6 +342,38 @@ export default function IctApplicationReview({ application, payments, notes }: P
           </CardContent>
         </Card>
       </div>
+
+      {application.membership_type === 'legacy' && (
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Existing Membership Claim</CardTitle></CardHeader>
+          <CardContent className="text-sm space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <p className="text-gray-500 text-xs">Self-Reported Rank</p>
+                <p className="font-medium">{application.self_reported_rank || '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs">Old CJTF ID / Rank Card No.</p>
+                <p className="font-medium">{application.legacy_id_number || '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs">Vouching Officer</p>
+                <p className="font-medium">{application.vouching_officer_name || '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs">Vouching Note</p>
+                {application.vouching_doc_url ? (
+                  <a href={application.vouching_doc_url} target="_blank" rel="noreferrer" className="font-medium text-cjtf-green underline">
+                    View document
+                  </a>
+                ) : (
+                  <p className="font-medium">Not provided</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm">Identity Verification</CardTitle></CardHeader>
