@@ -45,20 +45,12 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse
   }
 
-  // Any touch of the office flow tags this browser with a durable cookie —
-  // query params (`next`/`role`) get dropped whenever a user re-enters
-  // through a link that doesn't carry them (e.g. the homepage's generic
-  // "Start Your Application" CTA, or a bare bookmarked /auth/register),
-  // which used to silently bounce them into the recruitment OTP path.
-  // The cookie survives that and lets register/verify-phone recover intent.
+  // Office intent is carried exclusively by the explicit `role=office` /
+  // `next` query params, which the website's office links and the redirect
+  // below always set. A cookie fallback used to live here, but a stale
+  // `office_intent` cookie misrouted regular applicants into the office flow —
+  // the params alone are sufficient, so no cookie is set.
   const isOfficePath = pathname.startsWith('/portal/applicant/office')
-  if (isOfficePath) {
-    supabaseResponse.cookies.set('office_intent', '1', {
-      path: '/',
-      maxAge: 60 * 60,
-      sameSite: 'lax',
-    })
-  }
 
   // Must be logged in for portal
   if (!session) {
@@ -70,11 +62,7 @@ export async function updateSession(request: NextRequest) {
     if (isOfficePath) {
       url.searchParams.set('role', 'office')
     }
-    const res = NextResponse.redirect(url)
-    if (isOfficePath) {
-      res.cookies.set('office_intent', '1', { path: '/', maxAge: 60 * 60, sameSite: 'lax' })
-    }
-    return res
+    return NextResponse.redirect(url)
   }
 
   // Use service role to bypass RLS recursion on profiles table

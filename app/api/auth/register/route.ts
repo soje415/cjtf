@@ -85,19 +85,14 @@ export async function POST(req: NextRequest) {
     return res
   }
 
-  // Office registration is prototyping-stage — skip the phone OTP gate
-  // entirely and drop straight into the office flow. Recruitment still
-  // requires it. Fall back to the office_intent cookie (set by middleware
-  // on any visit to /portal/applicant/office) in case `next`/`role` got
-  // dropped along the way in — e.g. the user registered via a link that
-  // didn't carry them.
-  // role=office (from the login screen's "Register here" link) is a first-class
-  // signal too — it must not be dropped, otherwise an office registrant who
-  // arrived without a `next`/cookie is dumped into the recruitment OTP gate.
+  // Office registration skips the phone OTP gate and drops straight into the
+  // office flow. Office intent is signalled only by the explicit `role=office`
+  // param (from the website's office links) or a `next=/portal/applicant/office`
+  // path — both are preserved through the flow, so no cookie fallback is needed
+  // (a stale office_intent cookie used to misroute regular applicants here).
   const isOfficeIntent =
     role === 'office' ||
-    next === '/portal/applicant/office' ||
-    req.cookies.get('office_intent')?.value === '1'
+    next === '/portal/applicant/office'
   const destination = isOfficeIntent
     ? `${origin}/portal/applicant/office`
     : next
