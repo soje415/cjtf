@@ -8,7 +8,7 @@ export default async function VerifyPage({ params }: { params: { id: string } })
 
   const { data: app } = await supabase
     .from('applications')
-    .select('*')
+    .select('first_name, middle_name, last_name, cjtf_id_number, cjtf_rank, state_of_origin, lga_of_origin, passport_photo_url, completed_at')
     .eq('id', params.id)
     .eq('status', 'COMPLETED')
     .single()

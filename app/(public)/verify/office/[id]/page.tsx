@@ -7,7 +7,7 @@ export default async function VerifyOfficePage({ params }: { params: { id: strin
 
   const { data: reg } = await supabase
     .from('office_registrations')
-    .select('*')
+    .select('title, first_name, middle_name, last_name, cert_number, office_name, office_designation, office_address, district, area_council, completed_at')
     .eq('id', params.id)
     .eq('status', 'COMPLETED')
     .single()
