@@ -107,24 +107,27 @@ export default function Step5Review({ form, saving, membershipType, phoneVerifie
           <Row label="Guarantor Form" value={form.guarantor_form_url ? '✓ Uploaded' : '✗ Missing'} />
         </div>
 
-        <div className="flex justify-between pt-2">
-          <Button variant="outline" onClick={onBack}>← Back</Button>
-          {phoneVerified === false ? (
+        {phoneVerified === false && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 flex items-center justify-between gap-3">
+            <p className="text-xs text-amber-700">Phone number not verified yet (optional).</p>
             <a
               href="/portal/applicant/verify-phone?next=/portal/applicant/application"
-              className="inline-flex items-center justify-center rounded-lg bg-cjtf-gold text-cjtf-green hover:bg-cjtf-gold-dark font-semibold px-4 py-2 text-sm"
+              className="text-xs font-semibold text-amber-800 underline shrink-0"
             >
-              Verify phone to submit →
+              Verify now
             </a>
-          ) : (
-            <Button
-              onClick={onSubmit}
-              disabled={saving}
-              className="bg-cjtf-gold text-cjtf-green hover:bg-cjtf-gold-dark font-semibold"
-            >
-              {saving ? 'Submitting…' : 'Submit Application →'}
-            </Button>
-          )}
+          </div>
+        )}
+
+        <div className="flex justify-between pt-2">
+          <Button variant="outline" onClick={onBack}>← Back</Button>
+          <Button
+            onClick={onSubmit}
+            disabled={saving}
+            className="bg-cjtf-gold text-cjtf-green hover:bg-cjtf-gold-dark font-semibold"
+          >
+            {saving ? 'Submitting…' : 'Submit Application →'}
+          </Button>
         </div>
       </CardContent>
     </Card>

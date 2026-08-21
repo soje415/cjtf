@@ -129,18 +129,20 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     )
   }
 
-  // Phone verification (SMS OTP via Termii) is a hard gate before submission.
-  const { data: profile } = await service
-    .from('profiles')
-    .select('phone_verified')
-    .eq('id', user.id)
-    .single()
-  if (!profile?.phone_verified) {
-    return NextResponse.json(
-      { error: 'Please verify your phone number before submitting your application.' },
-      { status: 403 }
-    )
-  }
+  // Phone verification (SMS OTP via Termii) is intentionally a SOFT gate for now
+  // — Termii delivery has been unreliable, so we do NOT block submission on it.
+  // Re-enable by uncommenting once SMS delivery is confirmed working:
+  // const { data: profile } = await service
+  //   .from('profiles')
+  //   .select('phone_verified')
+  //   .eq('id', user.id)
+  //   .single()
+  // if (!profile?.phone_verified) {
+  //   return NextResponse.json(
+  //     { error: 'Please verify your phone number before submitting your application.' },
+  //     { status: 403 }
+  //   )
+  // }
 
   // Resubmission of a corrected, previously rejected application — route it
   // back to the stage that rejected it (or ICT if unknown).
