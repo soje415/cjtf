@@ -86,6 +86,32 @@ async function call<T>(method: 'POST' | 'GET', path: string, body?: Record<strin
   return json.data
 }
 
+/**
+ * Raw variant of `call` for the OPay/USSD endpoints, whose responses put the
+ * useful fields at the TOP level (redirectUrl, transactionReference, paid)
+ * rather than under `data`. Returns the full parsed JSON on success.
+ */
+async function rawCall<T = Record<string, unknown>>(method: 'POST' | 'GET', path: string, body?: Record<string, unknown>): Promise<T> {
+  if (!API_KEY || !API_SECRET) {
+    throw new Error('Hyparrow payments are not configured (missing API key/secret).')
+  }
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': API_KEY,
+      'x-api-secret': API_SECRET,
+    },
+    body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(30_000),
+  })
+  const json = (await res.json().catch(() => ({}))) as Record<string, unknown>
+  if (!res.ok || json.success === false) {
+    throw new Error((json.message as string) || (json.error as string) || `Hyparrow request failed (${res.status}).`)
+  }
+  return json as T
+}
+
 export function createCustomer(params: {
   firstName: string
   lastName: string
@@ -137,4 +163,62 @@ export function verifyWebhookSignature(rawBody: string, signature: string): bool
   const a = Buffer.from(expected)
   const b = Buffer.from(signature)
   return a.length === b.length && timingSafeEqual(a, b)
+}
+
+// ── OPay + USSD collection ────────────────────────────────────────────────
+// From https://docs.hyparrow.com/card-payments (Accepting payments).
+
+export interface OpayInitializeResult {
+  success: boolean
+  message: string
+  redirectUrl: string
+  transactionReference: string
+  responseCode: string
+}
+
+export interface OpayStatusResult {
+  success: boolean
+  transactionReference: string
+  responseCode: string
+  paid: boolean
+}
+
+export interface UssdIssuer {
+  bankName: string
+  bankCode: string
+}
+
+export interface UssdGenerateResult {
+  success: boolean
+  message: string
+  merchantTransactionReference: string
+  data: { transactionReference: string; ussdCode: string }
+}
+
+/** OPay redirect flow. Amount is in KOBO as an integer. */
+export function initializeOpayPayment(amountKobo: number, transactionReference?: string): Promise<OpayInitializeResult> {
+  return rawCall<OpayInitializeResult>('POST', '/payments/opay/initialize', {
+    amount: amountKobo,
+    currency: 'NGN',
+    ...(transactionReference ? { transactionReference } : {}),
+  })
+}
+
+/** Confirm an OPay payment settled. */
+export function getOpayPaymentStatus(reference: string): Promise<OpayStatusResult> {
+  return rawCall<OpayStatusResult>('POST', '/payments/opay/status', { reference })
+}
+
+/** Banks that support USSD collection. */
+export function listUssdIssuers(): Promise<{ success: boolean; data: UssdIssuer[] }> {
+  return rawCall<{ success: boolean; data: UssdIssuer[] }>('GET', '/payments/ussd/issuers')
+}
+
+/** Generate a USSD dial code. Amount is in NAIRA as a string. */
+export function generateUssdCode(amountNaira: string, bankCode: string, merchantTransactionReference?: string): Promise<UssdGenerateResult> {
+  return rawCall<UssdGenerateResult>('POST', '/payments/ussd/generate', {
+    amount: amountNaira,
+    bankCode,
+    ...(merchantTransactionReference ? { merchantTransactionReference } : {}),
+  })
 }

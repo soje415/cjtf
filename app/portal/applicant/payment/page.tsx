@@ -1,6 +1,7 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import VirtualAccountPayment from '@/components/dashboards/VirtualAccountPayment'
+import OpayUssdPayment from '@/components/dashboards/OpayUssdPayment'
 
 export default async function PaymentPage() {
   const supabase = createClient()
@@ -20,9 +21,12 @@ export default async function PaymentPage() {
   }
 
   return (
-    <VirtualAccountPayment
-      applicationId={app.id}
-      name={`${app.first_name} ${app.last_name}`}
-    />
+    <div className="max-w-2xl mx-auto space-y-8">
+      <VirtualAccountPayment
+        applicationId={app.id}
+        name={`${app.first_name} ${app.last_name}`}
+      />
+      <OpayUssdPayment applicationId={app.id} />
+    </div>
   )
 }

@@ -8,7 +8,12 @@ import { safeRedirectPath } from '@/lib/safe-next'
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = req.nextUrl
   const code = searchParams.get('code')
-  const next = safeRedirectPath(searchParams.get('next')) ?? '/portal/applicant/dashboard'
+  const linkType = searchParams.get('type')
+  // Recovery links (password reset) must land on the reset screen even if the
+  // `next` param didn't survive; other link types default to the dashboard.
+  const next =
+    safeRedirectPath(searchParams.get('next')) ??
+    (linkType === 'recovery' ? '/auth/reset-password' : '/portal/applicant/dashboard')
 
   if (!code) {
     return NextResponse.redirect(`${origin}/auth/login?error=${encodeURIComponent('Invalid or expired link.')}`)

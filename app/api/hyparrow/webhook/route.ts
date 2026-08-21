@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { verifyWebhookSignature } from '@/lib/hyparrow-pay'
-import { creditVirtualAccountPayment, creditOfficeRegistrationPayment } from '@/lib/notifications'
+import {
+  creditVirtualAccountPayment,
+  creditOfficeRegistrationPayment,
+  notifyPaymentComplete,
+  notifyOfficePaymentComplete,
+} from '@/lib/notifications'
 
 // Hyparrow fires a webhook when a transfer lands on a customer's dedicated
 // virtual account. Per the integration guide (§5):
@@ -89,6 +94,44 @@ export async function POST(req: Request) {
 
   const accountNumber = extractAccountNumber(data)
   const amountKobo = extractAmountKobo(data)
+
+  const service = createServiceClient()
+
+  // OPay / USSD collections have no virtual account — they are reconciled by the
+  // merchant reference we stored on a pending payment row. Match that first, so
+  // a card/OPay/USSD settlement is credited without an account number.
+  const merchantRef = str(
+    data,
+    'merchantTransactionReference', 'merchantReference', 'transactionReference',
+    'reference', 'paymentReference', 'TransactionRef', 'transactionRef'
+  )
+  if (merchantRef) {
+    const { data: payment } = await service
+      .from('payments')
+      .select('id, application_id, office_registration_id, amount, status')
+      .eq('paystack_reference', merchantRef)
+      .eq('status', 'pending')
+      .maybeSingle()
+
+    if (payment) {
+      // amountKobo is absent on some events; only enforce it when present.
+      const enough = amountKobo == null || amountKobo >= payment.amount
+      if (enough) {
+        await service.from('payments').update({
+          status: 'success',
+          paid_at: new Date().toISOString(),
+        }).eq('id', payment.id)
+        if (payment.application_id) {
+          await notifyPaymentComplete(service, payment.application_id)
+        } else if (payment.office_registration_id) {
+          await notifyOfficePaymentComplete(service, payment.office_registration_id)
+        }
+      }
+      return NextResponse.json({ ok: true })
+    }
+  }
+
+  // Bank-transfer credits need a virtual account number to reconcile against.
   if (!accountNumber || amountKobo == null) return NextResponse.json({ ok: true })
 
   // A unique reference for idempotency. Prefer a provider transaction id when
@@ -97,8 +140,6 @@ export async function POST(req: Request) {
     str(data, 'TransactionRef', 'transactionId', 'merchantReference', 'paymentReference') ||
     str(data, 'RetrievalReferenceNumber', 'retrievalReferenceNumber') ||
     `${accountNumber}-${amountKobo}`
-
-  const service = createServiceClient()
 
   // The VA belongs to either a recruitment application or an office
   // registration. Match on the account number we persisted at VA creation.
