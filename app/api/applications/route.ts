@@ -59,6 +59,10 @@ export async function GET() {
     query = query.eq('status', 'PENDING_INT_SCREENING')
   } else if (profile?.role === 'admin') {
     query = query.eq('status', 'PENDING_ADMIN_APPROVAL')
+  } else {
+    // Unknown/null role (or missing profile row): deny by default rather than
+    // returning the whole unfiltered table of PII.
+    return NextResponse.json({ applications: [] })
   }
 
   const { data, error } = await query.order('created_at', { ascending: false })

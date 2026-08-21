@@ -20,11 +20,17 @@ export async function POST(req: Request) {
 
   const { data: payment } = await service
     .from('payments')
-    .select('id, application_id, type')
+    .select('id, application_id, type, applicant_id')
     .eq('paystack_reference', reference)
     .single()
 
   if (!payment) return NextResponse.json({ paid: false })
+
+  // A user may only confirm their own payment — otherwise knowing someone
+  // else's reference would let them mark it success on the victim's behalf.
+  if (payment.applicant_id !== user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   await service.from('payments').update({
     status: 'success',

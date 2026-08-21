@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { generateCjtfId } from '@/lib/id-generator'
 import { sendSms } from '@/lib/termii'
+import { PORTAL_URL } from '@/lib/portal-url'
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
@@ -39,26 +40,43 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       )
     }
 
-    // Generate unique CJTF ID
-    let cjtfId: string
-    try {
-      cjtfId = await generateCjtfId()
-    } catch (e) {
-      return NextResponse.json({ error: 'ID generation failed: ' + String(e) }, { status: 500 })
-    }
-
+    // Generate unique CJTF ID. The read-max-then-+1 in lib/id-generator.ts is
+    // not atomic, so two concurrent generations can pick the same number; the
+    // UNIQUE constraint on cjtf_id_number is the backstop. Retry on a unique
+    // violation (23505) and re-guard the update on status so a double click
+    // can't issue twice.
     const fullName = [app.first_name, app.middle_name, app.last_name].filter(Boolean).join(' ')
 
-    // Mark COMPLETED — PDF is generated client-side and saved via /save-pdf
-    const { error: updateErr } = await service.from('applications').update({
-      cjtf_id_number: cjtfId,
-      status: 'COMPLETED',
-      completed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }).eq('id', params.id)
+    let cjtfId = ''
+    let moved: { id: string; cjtf_id_number: string } | null = null
+    for (let attempt = 0; attempt < 6; attempt++) {
+      try {
+        cjtfId = await generateCjtfId()
+      } catch (e) {
+        return NextResponse.json({ error: 'ID generation failed: ' + String(e) }, { status: 500 })
+      }
 
-    if (updateErr) {
-      return NextResponse.json({ error: 'Status update failed: ' + updateErr.message }, { status: 500 })
+      const { data, error: updateErr } = await service.from('applications').update({
+        cjtf_id_number: cjtfId,
+        status: 'COMPLETED',
+        completed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }).eq('id', params.id).eq('status', 'APPROVED_GENERATING_ID').select('id, cjtf_id_number').maybeSingle()
+
+      if (updateErr) {
+        if ((updateErr as { code?: string }).code === '23505' && attempt < 5) continue
+        return NextResponse.json({ error: 'Status update failed: ' + updateErr.message }, { status: 500 })
+      }
+      moved = data ?? null
+      break
+    }
+
+    if (!moved) {
+      // Someone else already issued this card (double click / race) — hand back
+      // the number that was written so the client can still render the PDF.
+      const { data: current } = await service.from('applications')
+        .select('cjtf_id_number').eq('id', params.id).maybeSingle()
+      return NextResponse.json({ ok: true, alreadyProcessed: true, cjtfId: current?.cjtf_id_number })
     }
 
     await service.from('application_notes').insert({
@@ -72,7 +90,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     if (app.phone_number) {
       await sendSms(
         app.phone_number,
-        `Congratulations ${fullName}! Your CJTF ID has been generated. Rank: ${app.cjtf_rank}. ID: ${cjtfId}. Login to download: ${process.env.NEXT_PUBLIC_APP_URL}/portal/applicant/id-card`
+        `Congratulations ${fullName}! Your CJTF ID has been generated. Rank: ${app.cjtf_rank}. ID: ${cjtfId}. Login to download: ${PORTAL_URL}/portal/applicant/id-card`
       ).catch(() => {})
     }
 

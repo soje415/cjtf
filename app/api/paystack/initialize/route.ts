@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { initializeTransaction } from '@/lib/paystack'
 import { feeForMembershipType } from '@/lib/fees'
+import { PORTAL_URL } from '@/lib/portal-url'
 import { randomBytes } from 'crypto'
 function nanoid(len: number) { return randomBytes(len).toString('hex').slice(0, len).toUpperCase() }
 
@@ -52,7 +53,7 @@ export async function POST(req: Request) {
     amount,
     reference,
     metadata: { application_id: applicationId, payment_type: type, user_id: user.id },
-    callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/portal/applicant/payment`,
+    callback_url: `${PORTAL_URL}/portal/applicant/payment`,
   })
 
   // Store pending payment

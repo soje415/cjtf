@@ -74,6 +74,19 @@ export async function POST(req: Request) {
   }
 
   const data = event.data ?? {}
+
+  // Refunds, reversals and other non-credit events carry the same
+  // accountNumber + amount fields as a credit, so trusting them would credit
+  // money on a reversal. Reject known non-credit event/status values; if the
+  // provider omits the event type (some do), fall through and rely on the
+  // verified signature + the UNIQUE reference idempotency.
+  const nonCredit = /reversal|refund|chargeback|debit|failed|reversed/i
+  const eventType = typeof event.event === 'string' ? event.event : ''
+  const txStatus = str(data, 'status', 'Status', 'transactionStatus')
+  if (nonCredit.test(eventType) || nonCredit.test(txStatus)) {
+    return NextResponse.json({ ok: true })
+  }
+
   const accountNumber = extractAccountNumber(data)
   const amountKobo = extractAmountKobo(data)
   if (!accountNumber || amountKobo == null) return NextResponse.json({ ok: true })

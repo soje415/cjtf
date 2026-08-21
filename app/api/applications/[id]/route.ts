@@ -3,6 +3,8 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
 import { sendSms } from '@/lib/termii'
 
+const STAFF_ROLES = ['ict', 'int', 'admin', 'executive']
+
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const supabase = createClient()
   const { data: { session: _session } } = await supabase.auth.getSession()
@@ -10,6 +12,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const service = createServiceClient()
+  const { data: profile } = await service.from('profiles').select('role').eq('id', user.id).maybeSingle()
+  const isStaff = profile?.role ? STAFF_ROLES.includes(profile.role) : false
+
   const { data, error } = await service
     .from('applications')
     .select('*, payments(*), application_notes(*, profiles(full_name, role))')
@@ -17,6 +22,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 404 })
+  if (!isStaff && data.applicant_id !== user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
   return NextResponse.json({ application: data })
 }
 
@@ -48,7 +56,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     'mother_maiden_name','place_of_birth','nationality','marital_status','religion',
     'blood_group','height','distinguishing_marks','occupation','education',
     'state_of_origin','lga_of_origin','state_of_residence','lga_of_residence',
-    'residential_address','phone_number','email','nin','bvn','identity_verify_waived',
+    'residential_address','phone_number','email','nin','bvn',
     'means_of_id_type','means_of_id_number',
     'next_of_kin_name','next_of_kin_phone','next_of_kin_relationship','next_of_kin_address',
     'guarantor_name','guarantor_phone','guarantor_title','guarantor_address',
@@ -91,7 +99,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const service = createServiceClient()
   const { data: app } = await service
     .from('applications')
-    .select('applicant_id, status, membership_type, first_name, last_name, phone_number, passport_photo_url, rejected_by_role, identity_verified, identity_verify_waived, self_reported_rank, vouching_officer_name')
+    .select('applicant_id, status, membership_type, first_name, last_name, phone_number, passport_photo_url, rejected_by_role, identity_verified, identity_verify_waived, self_reported_rank, vouching_officer_name, vouching_doc_url')
     .eq('id', params.id)
     .single()
 
@@ -105,7 +113,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const required = ['first_name','last_name','phone_number','passport_photo_url']
   if (app.membership_type === 'legacy') {
-    required.push('self_reported_rank', 'vouching_officer_name')
+    required.push('self_reported_rank', 'vouching_officer_name', 'vouching_doc_url')
   }
   for (const field of required) {
     if (!app[field as keyof typeof app]) {

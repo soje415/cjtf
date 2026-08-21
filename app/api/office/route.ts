@@ -52,6 +52,8 @@ export async function GET() {
     query = query.eq('status', 'PENDING_INT_SCREENING')
   } else if (profile?.role === 'admin') {
     query = query.in('status', ['PENDING_ADMIN_APPROVAL', 'APPROVED_GENERATING_CERT'])
+  } else if (profile?.role === 'ict') {
+    query = query.in('status', ['APPROVED_GENERATING_CERT', 'COMPLETED'])
   } else {
     query = query.eq('registrant_id', user.id)
   }

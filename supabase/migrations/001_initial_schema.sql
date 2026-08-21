@@ -183,7 +183,7 @@ CREATE TRIGGER on_auth_user_created
 -- Storage buckets
 -- ============================================================
 INSERT INTO storage.buckets (id, name, public) VALUES
-  ('applicant-documents', 'applicant-documents', false),
+  ('applicant-documents', 'applicant-documents', true),
   ('id-cards', 'id-cards', true)
 ON CONFLICT DO NOTHING;
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { createCustomer, createVirtualAccount } from '@/lib/hyparrow-pay'
+import { createCustomer, createVirtualAccount, findCustomer, type VirtualAccount } from '@/lib/hyparrow-pay'
 import { OFFICE_FEE_KOBO } from '@/lib/fees'
 
 // Hyparrow expects a provider NAME here, not a numeric CBN/NIP code. Passing a
@@ -44,20 +44,57 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
   }
 
   try {
+    const email = reg.email || user.email!
+    const phoneNumber = reg.phone_number || ''
     let customerId = reg.hyparrow_customer_id
+    let va: VirtualAccount | null = null
+
     if (!customerId) {
-      const customer = await createCustomer({
-        firstName: reg.first_name || 'Registrant',
-        lastName: reg.last_name || reg.id.slice(0, 8),
-        email: reg.email || user.email!,
-        phoneNumber: reg.phone_number || '',
-        dateOfBirth: reg.date_of_birth || undefined,
-      })
-      customerId = customer.id
+      try {
+        const customer = await createCustomer({
+          firstName: reg.first_name || 'Registrant',
+          lastName: reg.last_name || reg.id.slice(0, 8),
+          email,
+          phoneNumber,
+          dateOfBirth: reg.date_of_birth || undefined,
+        })
+        customerId = customer.id
+      } catch (err) {
+        // Customer already exists upstream but our DB save didn't land — look it
+        // up and reuse it (including any VA already issued on it) instead of
+        // failing forever.
+        if (!/already exists/i.test(err instanceof Error ? err.message : '')) throw err
+        const found = await findCustomer({ email, phoneNumber })
+        if (!found) throw err
+        customerId = found.id
+        if (found.accountNumber) {
+          va = {
+            accountNumber: found.accountNumber,
+            accountName: found.accountName || '',
+            bankName: found.bankName || '',
+            bankCode: found.bankCode || BANK_CODE,
+          }
+        }
+      }
       await service.from('office_registrations').update({ hyparrow_customer_id: customerId }).eq('id', reg.id)
     }
 
-    const va = await createVirtualAccount(customerId, BANK_CODE)
+    if (!va) {
+      try {
+        va = await createVirtualAccount(customerId, BANK_CODE)
+      } catch (err) {
+        if (!/already exists/i.test(err instanceof Error ? err.message : '')) throw err
+        const found = await findCustomer({ email, phoneNumber })
+        if (!found?.accountNumber) throw err
+        va = {
+          accountNumber: found.accountNumber,
+          accountName: found.accountName || '',
+          bankName: found.bankName || '',
+          bankCode: found.bankCode || BANK_CODE,
+        }
+      }
+    }
+
     await service.from('office_registrations').update({
       va_account_number: va.accountNumber,
       va_account_name: va.accountName,

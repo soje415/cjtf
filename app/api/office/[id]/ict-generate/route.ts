@@ -27,17 +27,36 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
 
   if (reg.cert_number) return NextResponse.json({ ok: true, certNumber: reg.cert_number })
 
-  let certNumber: string
-  try {
-    certNumber = await generateCertNumber()
-  } catch (e) {
-    return NextResponse.json({ error: 'Permit number generation failed: ' + String(e) }, { status: 500 })
+  // Read-max-then-+1 in lib/cert-generator.ts is not atomic, so two concurrent
+  // generations can pick the same number; the UNIQUE constraint on cert_number
+  // is the backstop. Guard the write on cert_number IS NULL (so a double click
+  // can't assign twice) and retry on a unique violation (23505).
+  for (let attempt = 0; attempt < 6; attempt++) {
+    let certNumber: string
+    try {
+      certNumber = await generateCertNumber()
+    } catch (e) {
+      return NextResponse.json({ error: 'Permit number generation failed: ' + String(e) }, { status: 500 })
+    }
+
+    const { data: moved, error } = await service.from('office_registrations')
+      .update({ cert_number: certNumber, updated_at: new Date().toISOString() })
+      .eq('id', params.id)
+      .eq('cert_number', null)
+      .select('cert_number')
+      .maybeSingle()
+
+    if (error) {
+      if ((error as { code?: string }).code === '23505' && attempt < 5) continue
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+    if (!moved) {
+      const { data: current } = await service.from('office_registrations')
+        .select('cert_number').eq('id', params.id).maybeSingle()
+      return NextResponse.json({ ok: true, certNumber: current?.cert_number ?? certNumber })
+    }
+    return NextResponse.json({ ok: true, certNumber })
   }
 
-  const { error } = await service.from('office_registrations')
-    .update({ cert_number: certNumber, updated_at: new Date().toISOString() })
-    .eq('id', params.id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  return NextResponse.json({ ok: true, certNumber })
+  return NextResponse.json({ error: 'Permit number generation failed after retries' }, { status: 500 })
 }

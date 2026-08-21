@@ -234,15 +234,9 @@ function StepRegistrant({ form, update, saving, ensureRegId, saveProgress, onNex
     setVerifying(false)
   }
 
-  // PROTOTYPE: lets the registrant self-skip NIN/BVN verification when the
-  // service doesn't come up, instead of getting stuck. Persists immediately.
-  // Staff still see it as unverified/waived on review.
-  async function handleSkip() {
-    update({ identity_verify_waived: true })
-    await saveProgress({ identity_verify_waived: true })
-    toast('Verification skipped — you can continue for now.')
-  }
-
+  // Self-serve identity waiver was removed for production: identity must be
+  // verified (NIN/BVN). The registrant can no longer set identity_verify_waived
+  // themselves (the field is no longer in the PATCH allowlist either).
   function handleRetryVerification() {
     update({ identity_verify_waived: false })
     saveProgress({ identity_verify_waived: false })
@@ -253,7 +247,7 @@ function StepRegistrant({ form, update, saving, ensureRegId, saveProgress, onNex
     ['phone_number', 'Phone number'], ['residential_address', 'Residential address'],
   ]
   const missing = REQUIRED.filter(([k]) => !form[k]).map(([, l]) => l)
-  const valid = (verified || waived) && missing.length === 0
+  const valid = verified && missing.length === 0
 
   return (
     <Card>
@@ -294,9 +288,6 @@ function StepRegistrant({ form, update, saving, ensureRegId, saveProgress, onNex
                 </Button>
               </div>
               {verifyError && <p className="text-sm text-red-600 mt-2">{verifyError}</p>}
-              <button type="button" onClick={handleSkip} className="text-xs text-gray-500 underline mt-2 hover:text-gray-700">
-                Verification service not working? Skip for now and continue.
-              </button>
             </>
           )}
         </div>
@@ -327,7 +318,7 @@ function StepRegistrant({ form, update, saving, ensureRegId, saveProgress, onNex
 
         {!verified && !waived && (
           <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-            Verify your NIN or BVN above to continue, or skip it if the service isn&apos;t responding.
+            Verify your NIN or BVN above to continue.
           </p>
         )}
         {(verified || waived) && missing.length > 0 && (

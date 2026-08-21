@@ -17,7 +17,8 @@ export async function generateCjtfId(): Promise<string> {
   let nextSeq = 1
   if (data?.cjtf_id_number) {
     const parts = data.cjtf_id_number.split('/')
-    nextSeq = parseInt(parts[2], 10) + 1
+    const seq = parseInt(parts[2], 10)
+    if (Number.isFinite(seq)) nextSeq = seq + 1
   }
 
   return `${prefix}${String(nextSeq).padStart(5, '0')}`

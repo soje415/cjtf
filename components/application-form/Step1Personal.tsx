@@ -86,17 +86,9 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
     setVerifying(false)
   }
 
-  // PROTOTYPE: lets the applicant self-skip NIN/BVN verification when the
-  // service doesn't come up, instead of getting stuck. Persists immediately
-  // so it survives a step change. ICT still sees it as unverified/waived on
-  // review. Re-tighten for production by removing this and requiring the
-  // ICT/admin-only /waive-verification route instead.
-  async function handleSkip() {
-    update({ identity_verify_waived: true })
-    await saveProgress({ identity_verify_waived: true })
-    toast('Continuing without NIN/BVN — staff will verify you in person.')
-  }
-
+  // Self-serve identity waiver was removed for production: identity must be
+  // verified (NIN/BVN), or waived by ICT/Admin via /waive-verification. The
+  // applicant can no longer set identity_verify_waived themselves.
   function handleRetryVerification() {
     update({ identity_verify_waived: false })
     saveProgress({ identity_verify_waived: false })
@@ -123,7 +115,7 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
     ['lga_of_origin', 'LGA of origin'],
   ]
   const missing = REQUIRED.filter(([k]) => !form[k]).map(([, label]) => label)
-  const valid = (form.identity_verified || waived) && missing.length === 0
+  const valid = form.identity_verified && missing.length === 0
 
   // Only lock a KYC field if it actually came back with a value — otherwise the
   // applicant would be stuck with a blank, un-editable required field.
@@ -209,22 +201,6 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
                 </Button>
               </div>
               {verifyError && <p className="text-sm text-red-600 mt-2">{verifyError}</p>}
-              {/* Two different people end up here: one whose verification won't
-                  go through, and one who simply has no NIN or BVN. The second
-                  case is common enough that it needs to be named, or the
-                  applicant reads the notice as "not for me" and stops. */}
-              <div className="mt-3 border-t pt-2.5 space-y-1.5">
-                <p className="text-xs text-gray-500">
-                  No NIN or BVN, or the check won&apos;t go through?
-                </p>
-                <button
-                  type="button"
-                  onClick={handleSkip}
-                  className="text-xs text-cjtf-green underline hover:text-cjtf-green-dark"
-                >
-                  Continue without verification &mdash; staff will verify you in person.
-                </button>
-              </div>
             </>
           )}
         </div>
@@ -353,7 +329,7 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
 
         {!verified && !waived && (
           <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-            Verify your NIN or BVN above to continue, or skip it if the service isn&apos;t responding.
+            Verify your NIN or BVN above to continue.
           </p>
         )}
 

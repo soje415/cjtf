@@ -1,0 +1,11 @@
+-- ============================================================
+-- Make applicant-documents a public bucket
+-- ============================================================
+-- Documents (passport photos, ID scans, office-space photos, signatures,
+-- endorsement uploads) live in applicant-documents and are referenced by their
+-- public URL across the UI (review screens, the ID-card render, office-photo
+-- review) via storage.getPublicUrl(). The bucket was created with public =
+-- false, so those URLs 403 and the images/links render broken. id-cards and
+-- certificates are already public for the same reason — make this one public
+-- too. Paths are UUID- or timestamp-keyed, so URLs are unguessable in practice.
+UPDATE storage.buckets SET public = true WHERE id = 'applicant-documents';

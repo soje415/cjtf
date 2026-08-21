@@ -50,9 +50,14 @@ export async function POST(req: NextRequest) {
     .single()
 
   const role = profile?.role ?? 'applicant'
-  // Fall back to the office_intent cookie (set by middleware on any visit to
-  // /portal/applicant/office) when `next` didn't survive the redirect chain.
-  const officeIntent = next ?? (req.cookies.get('office_intent')?.value === '1' ? '/portal/applicant/office' : null)
+  // Route to the office flow when the user explicitly picked the "Office
+  // Registration" login screen (submittedRole === 'office'), when a `next`
+  // carried it, or when the office_intent cookie (set by middleware on any
+  // visit to /portal/applicant/office) is present. Office registrants are
+  // stored as role 'applicant', so without this the office picker would drop
+  // them onto the recruitment dashboard.
+  const officeIntent = next
+    ?? (submittedRole === 'office' || req.cookies.get('office_intent')?.value === '1' ? '/portal/applicant/office' : null)
   const target = role === 'applicant' && officeIntent ? officeIntent : `/portal/${role}/dashboard`
 
   const res = NextResponse.redirect(`${origin}${target}`, { status: 303 })

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { sendSms } from '@/lib/termii'
+import { PORTAL_URL } from '@/lib/portal-url'
 
 // POST: store the client-rendered Operational Permit PDF and mark the
 // registration COMPLETED. Only ICT renders and uploads the permit binary.
@@ -42,19 +43,26 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const { data: { publicUrl } } = service.storage.from('certificates').getPublicUrl(pdfPath)
 
-    const updates: Record<string, unknown> = {
-      cert_pdf_url: publicUrl,
-      updated_at: new Date().toISOString(),
-    }
-    if (reg.status === 'APPROVED_GENERATING_CERT') {
-      updates.status = 'COMPLETED'
-      updates.completed_at = new Date().toISOString()
-    }
+    // Always write the PDF URL. The →COMPLETED transition is guarded on status
+    // so a double save/regenerate can't insert a duplicate note or send the SMS
+    // twice — only the first call out of APPROVED_GENERATING_CERT wins.
+    await service.from('office_registrations')
+      .update({ cert_pdf_url: publicUrl, updated_at: new Date().toISOString() })
+      .eq('id', params.id)
 
-    await service.from('office_registrations').update(updates).eq('id', params.id)
+    let completed = false
+    if (reg.status === 'APPROVED_GENERATING_CERT') {
+      const { data: moved } = await service.from('office_registrations')
+        .update({ status: 'COMPLETED', completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq('id', params.id)
+        .eq('status', 'APPROVED_GENERATING_CERT')
+        .select('id')
+        .maybeSingle()
+      completed = !!moved
+    }
 
     // Record permit issuance once + notify the registrant.
-    if (reg.status === 'APPROVED_GENERATING_CERT') {
+    if (completed) {
       await service.from('office_registration_notes').insert({
         registration_id: params.id, staff_id: user.id,
         note: 'Operational Permit generated and saved by ICT.', action: 'cert_generated',
@@ -62,7 +70,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       if (reg.phone_number) {
         await sendSms(
           reg.phone_number,
-          `CJTF Portal: Your Operational Permit for "${reg.office_name}" has been issued${reg.cert_number ? ` (Permit No: ${reg.cert_number})` : ''}. Login to download: ${process.env.NEXT_PUBLIC_APP_URL}/portal/applicant/certificate`
+          `CJTF Portal: Your Operational Permit for "${reg.office_name}" has been issued${reg.cert_number ? ` (Permit No: ${reg.cert_number})` : ''}. Login to download: ${PORTAL_URL}/portal/applicant/certificate`
         ).catch(() => {})
       }
     }

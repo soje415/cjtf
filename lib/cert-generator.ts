@@ -19,7 +19,8 @@ export async function generateCertNumber(): Promise<string> {
   let nextSeq = 1
   if (data?.cert_number) {
     const parts = data.cert_number.split('/')
-    nextSeq = parseInt(parts[3], 10) + 1
+    const seq = parseInt(parts[3], 10)
+    if (Number.isFinite(seq)) nextSeq = seq + 1
   }
 
   return `${prefix}${String(nextSeq).padStart(5, '0')}`

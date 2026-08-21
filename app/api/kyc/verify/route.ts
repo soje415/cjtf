@@ -73,6 +73,13 @@ export async function POST(req: NextRequest) {
   if (id.middleName) updates.middle_name = id.middleName
   if (photoUrl) updates.passport_photo_url = photoUrl
 
+  // gender has a CHECK ('male'|'female') and date_of_birth is a `date` column —
+  // the provider can return an empty value for either when the record lacks the
+  // field, which Postgres rejects instead of ignoring. Null them out here just
+  // like the PATCH route does (a '' default would otherwise 500 a good lookup).
+  if (updates.gender === '') updates.gender = null
+  if (updates.date_of_birth === '') updates.date_of_birth = null
+
   const { error } = await service.from('applications').update(updates).eq('id', appId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

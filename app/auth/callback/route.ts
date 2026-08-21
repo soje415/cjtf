@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { safeRedirectPath } from '@/lib/safe-next'
 
 // Exchanges a Supabase auth link's ?code= for a session, then continues to
 // `next` (used by the password-reset email link). Cookies must be set on the
@@ -7,7 +8,7 @@ import { createServerClient } from '@supabase/ssr'
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = req.nextUrl
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/portal/applicant/dashboard'
+  const next = safeRedirectPath(searchParams.get('next')) ?? '/portal/applicant/dashboard'
 
   if (!code) {
     return NextResponse.redirect(`${origin}/auth/login?error=${encodeURIComponent('Invalid or expired link.')}`)

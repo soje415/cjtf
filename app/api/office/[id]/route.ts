@@ -3,6 +3,8 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { sendSms } from '@/lib/termii'
 import { officeChecksRelaxed, describeSkippedOfficeChecks } from '@/lib/pilot'
 
+const STAFF_ROLES = ['ict', 'int', 'admin', 'executive']
+
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const supabase = createClient()
   const { data: { session } } = await supabase.auth.getSession()
@@ -10,6 +12,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const service = createServiceClient()
+  const { data: profile } = await service.from('profiles').select('role').eq('id', user.id).maybeSingle()
+  const isStaff = profile?.role ? STAFF_ROLES.includes(profile.role) : false
+
   const { data, error } = await service
     .from('office_registrations')
     .select('*, payments(*), office_registration_notes(*, profiles(full_name, role))')
@@ -17,6 +22,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 404 })
+  if (!isStaff && data.registrant_id !== user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
   return NextResponse.json({ registration: data })
 }
 
@@ -44,7 +52,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const allowed = [
     'title', 'first_name', 'middle_name', 'last_name', 'date_of_birth', 'gender',
-    'phone_number', 'email', 'residential_address', 'nin', 'bvn', 'identity_verify_waived',
+    'phone_number', 'email', 'residential_address', 'nin', 'bvn',
     'office_name', 'office_designation', 'area_council', 'district',
     'office_address', 'landmark', 'office_photo_urls',
     'district_head_name', 'endorsement_doc_url',
@@ -137,14 +145,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   if (isResubmit) {
     const target = reg.rejected_by_role === 'admin' ? 'PENDING_ADMIN_APPROVAL' : 'PENDING_INT_SCREENING'
-    const { error: reErr } = await service.from('office_registrations').update({
+    const { data: moved, error: reErr } = await service.from('office_registrations').update({
       status: target,
       rejected_by_role: null,
       rejected_at: null,
       rejection_reason: null,
       updated_at: new Date().toISOString(),
-    }).eq('id', params.id)
+    }).eq('id', params.id).eq('status', 'REJECTED').select('id').maybeSingle()
     if (reErr) return NextResponse.json({ error: reErr.message }, { status: 500 })
+    if (!moved) return NextResponse.json({ ok: true, alreadyProcessed: true })
 
     await service.from('office_registration_notes').insert({
       registration_id: params.id,
@@ -164,12 +173,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ success: true, resubmitted: true })
   }
 
-  const { error } = await service
+  // Conditional on the status we validated above, so a double submit can't fire
+  // the confirmation SMS twice (mirrors the recruitment submit route).
+  const { data: moved } = await service
     .from('office_registrations')
     .update({ status: 'PENDING_PAYMENT', submitted_at: new Date().toISOString() })
     .eq('id', params.id)
+    .eq('status', 'DRAFT')
+    .select('id')
+    .maybeSingle()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (!moved) return NextResponse.json({ ok: true, alreadyProcessed: true })
 
   if (reg.phone_number) {
     await sendSms(

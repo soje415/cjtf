@@ -42,12 +42,6 @@ const OperationalPermit = forwardRef<HTMLDivElement, PermitProps>(function Opera
       fontFamily: 'Georgia, "Times New Roman", serif', color: NAVY,
       boxSizing: 'border-box', overflow: 'hidden',
     }}>
-      {/* Corner colour wedges (Nigeria / CJTF palette) */}
-      <div style={{ position: 'absolute', top: 0, left: 0, width: 0, height: 0, borderTop: `90px solid ${RED}`, borderRight: '90px solid transparent' }} />
-      <div style={{ position: 'absolute', top: 0, right: 0, width: 0, height: 0, borderTop: `90px solid ${GOLD}`, borderLeft: '90px solid transparent' }} />
-      <div style={{ position: 'absolute', bottom: 0, left: 0, width: 0, height: 0, borderBottom: `90px solid ${GOLD}`, borderRight: '90px solid transparent' }} />
-      <div style={{ position: 'absolute', bottom: 0, right: 0, width: 0, height: 0, borderBottom: `90px solid ${RED}`, borderLeft: '90px solid transparent' }} />
-
       {/* Ornate double border */}
       <div style={{ position: 'absolute', inset: 18, border: `3px solid ${GOLD}` }} />
       <div style={{ position: 'absolute', inset: 26, border: `1px solid ${NAVY}` }} />
@@ -64,7 +58,7 @@ const OperationalPermit = forwardRef<HTMLDivElement, PermitProps>(function Opera
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '6px 30px 0' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/coat-of-arms.jpeg" alt="Federal Republic of Nigeria" crossOrigin="anonymous"
+          <img src="/cjtf-logo.jpg" alt="CJTF Nigeria" crossOrigin="anonymous"
             style={{ width: 86, height: 86, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${GOLD}` }} />
           <div style={{ flex: 1, textAlign: 'center' }}>
             <div style={{ fontSize: 42, fontWeight: 800, letterSpacing: 1, color: NAVY }}>CIVILIAN JOINT TASK FORCE</div>
@@ -72,8 +66,8 @@ const OperationalPermit = forwardRef<HTMLDivElement, PermitProps>(function Opera
             <div style={{ fontSize: 14, color: NAVY }}>Opposite Kaita Plaza by SDP Junction G/lada, Abuja</div>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/cjtf-flag.jpeg" alt="CJTF Flag" crossOrigin="anonymous"
-            style={{ width: 44, height: 86, borderRadius: 4, objectFit: 'cover', border: `2px solid ${NAVY}` }} />
+          <img src="/coat-of-arms.jpeg" alt="Federal Republic of Nigeria" crossOrigin="anonymous"
+            style={{ width: 86, height: 86, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${GOLD}` }} />
         </div>
 
         {/* Title banner */}

@@ -16,19 +16,30 @@
  * Superseded the old two-payment split (ID card + training). Existing rows of
  * the legacy types are still honoured as full payment, see isApplicationPaid().
  */
-export const REGISTRATION_FEE_KOBO = Number(
-  process.env.NEXT_PUBLIC_REGISTRATION_FEE_KOBO ?? 500_000
+
+/** Parse a kobo amount from an env var, falling back to the default on any
+ * non-numeric input. `Number('')` is 0, which would otherwise make every fee
+ * free and every payment "paid in full". */
+function koboFromEnv(raw: string | undefined, fallback: number): number {
+  const n = Number(raw)
+  return Number.isFinite(n) && n > 0 ? n : fallback
+}
+
+export const REGISTRATION_FEE_KOBO = koboFromEnv(
+  process.env.NEXT_PUBLIC_REGISTRATION_FEE_KOBO,
+  500_000
 )
 
 /** One registration fee per CJTF office — ₦10,000. */
-export const OFFICE_FEE_KOBO = Number(process.env.NEXT_PUBLIC_OFFICE_FEE_KOBO ?? 1_000_000)
+export const OFFICE_FEE_KOBO = koboFromEnv(process.env.NEXT_PUBLIC_OFFICE_FEE_KOBO, 1_000_000)
 
 /**
  * Reduced fee for already-recognised members being digitised into the portal
  * — ₦3,000, just for the ID card, since they skip INT screening entirely.
  */
-export const LEGACY_REGISTRATION_FEE_KOBO = Number(
-  process.env.NEXT_PUBLIC_LEGACY_REGISTRATION_FEE_KOBO ?? 300_000
+export const LEGACY_REGISTRATION_FEE_KOBO = koboFromEnv(
+  process.env.NEXT_PUBLIC_LEGACY_REGISTRATION_FEE_KOBO,
+  300_000
 )
 
 /** Which registration fee applies to a given applicant. */
