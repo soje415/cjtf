@@ -1,7 +1,7 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import VerifyPhoneForm from '@/components/dashboards/VerifyPhoneForm'
-import { safeNext } from '@/lib/safe-next'
+import { safeApplicantNext } from '@/lib/safe-next'
 
 export default async function VerifyPhonePage({ searchParams }: { searchParams: { next?: string } }) {
   const supabase = createClient()
@@ -11,8 +11,9 @@ export default async function VerifyPhonePage({ searchParams }: { searchParams: 
   if (!user) redirect('/auth/login')
 
   // This is the recruitment-only OTP gate; office registrants are routed
-  // straight to the office flow and never land here, so only `next` matters.
-  const next = safeNext(searchParams.next) ?? null
+  // straight to the office flow and never land here. `next` may return the
+  // applicant to any /portal/applicant path (e.g. their in-progress form).
+  const next = safeApplicantNext(searchParams.next) ?? null
 
   const { data: profile } = await service
     .from('profiles')

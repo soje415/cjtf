@@ -12,6 +12,7 @@ interface Props {
   saving: boolean
   membershipType: 'new' | 'legacy'
   appId: string | null
+  phoneVerified?: boolean
   onBack: () => void
   onSubmit: () => Promise<void>
 }
@@ -25,7 +26,7 @@ function Row({ label, value }: { label: string; value: string }) {
   )
 }
 
-export default function Step5Review({ form, saving, membershipType, onBack, onSubmit }: Props) {
+export default function Step5Review({ form, saving, membershipType, phoneVerified, onBack, onSubmit }: Props) {
   return (
     <Card>
       <CardContent className="p-6 space-y-4">
@@ -108,13 +109,22 @@ export default function Step5Review({ form, saving, membershipType, onBack, onSu
 
         <div className="flex justify-between pt-2">
           <Button variant="outline" onClick={onBack}>← Back</Button>
-          <Button
-            onClick={onSubmit}
-            disabled={saving}
-            className="bg-cjtf-gold text-cjtf-green hover:bg-cjtf-gold-dark font-semibold"
-          >
-            {saving ? 'Submitting…' : 'Submit Application →'}
-          </Button>
+          {phoneVerified === false ? (
+            <a
+              href="/portal/applicant/verify-phone?next=/portal/applicant/application"
+              className="inline-flex items-center justify-center rounded-lg bg-cjtf-gold text-cjtf-green hover:bg-cjtf-gold-dark font-semibold px-4 py-2 text-sm"
+            >
+              Verify phone to submit →
+            </a>
+          ) : (
+            <Button
+              onClick={onSubmit}
+              disabled={saving}
+              className="bg-cjtf-gold text-cjtf-green hover:bg-cjtf-gold-dark font-semibold"
+            >
+              {saving ? 'Submitting…' : 'Submit Application →'}
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

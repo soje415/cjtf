@@ -27,3 +27,14 @@ export function safeRedirectPath(next: string | null | undefined): string | null
   if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(next)) return null
   return next
 }
+
+/**
+ * A same-origin `/portal/applicant/*` path, for post-verification return links
+ * (e.g. send the applicant back to their in-progress form after they verify
+ * their phone). Same-origin safety from safeRedirectPath, scoped to the
+ * applicant portal so it can't be aimed at auth/staff paths.
+ */
+export function safeApplicantNext(next: string | null | undefined): string | null {
+  const p = safeRedirectPath(next)
+  return p && p.startsWith('/portal/applicant/') ? p : null
+}

@@ -22,6 +22,12 @@ export default async function ApplicationPage({
     .limit(1)
     .maybeSingle()
 
+  const { data: profile } = await service
+    .from('profiles')
+    .select('phone_verified')
+    .eq('id', user.id)
+    .maybeSingle()
+
   // The form is editable only while DRAFT, or after a rejection (to correct
   // and resubmit). Anything mid-review or completed goes to the dashboard.
   if (latest && latest.status !== 'DRAFT' && latest.status !== 'REJECTED') {
@@ -37,5 +43,12 @@ export default async function ApplicationPage({
 
   const membershipType = latest?.membership_type ?? (searchParams.type === 'legacy' ? 'legacy' : 'new')
 
-  return <ApplicationForm existingApplication={latest} userId={user.id} membershipType={membershipType} />
+  return (
+    <ApplicationForm
+      existingApplication={latest}
+      userId={user.id}
+      membershipType={membershipType}
+      phoneVerified={profile?.phone_verified ?? false}
+    />
+  )
 }

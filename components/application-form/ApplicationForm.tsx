@@ -87,10 +87,12 @@ export default function ApplicationForm({
   existingApplication,
   userId,
   membershipType,
+  phoneVerified,
 }: {
   existingApplication: Application | null
   userId: string
   membershipType: 'new' | 'legacy'
+  phoneVerified?: boolean
 }) {
   const router = useRouter()
   const [step, setStep] = useState(0)
@@ -256,7 +258,7 @@ export default function ApplicationForm({
       {step === 1 && <Step2Contact {...stepProps} onNext={() => setStep(2)} onBack={() => setStep(0)} />}
       {step === 2 && <Step3NextOfKin {...stepProps} membershipType={membershipType} onNext={() => setStep(3)} onBack={() => setStep(1)} />}
       {step === 3 && <Step4Documents {...stepProps} membershipType={membershipType} userId={userId} appId={appId} onNext={() => setStep(4)} onBack={() => setStep(2)} />}
-      {step === 4 && <Step5Review {...stepProps} membershipType={membershipType} appId={appId} onBack={() => setStep(3)} onSubmit={handleSubmit} />}
+      {step === 4 && <Step5Review {...stepProps} membershipType={membershipType} appId={appId} phoneVerified={phoneVerified} onBack={() => setStep(3)} onSubmit={handleSubmit} />}
     </div>
   )
 }
