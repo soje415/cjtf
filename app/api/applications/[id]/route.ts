@@ -129,19 +129,18 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     )
   }
 
-  // PROTOTYPE: phone-number verification gate relaxed for testing.
-  // Re-enable for production by uncommenting the block below.
-  // const { data: profile } = await service
-  //   .from('profiles')
-  //   .select('phone_verified')
-  //   .eq('id', user.id)
-  //   .single()
-  // if (!profile?.phone_verified) {
-  //   return NextResponse.json(
-  //     { error: 'Please verify your phone number before submitting your application.' },
-  //     { status: 403 }
-  //   )
-  // }
+  // Phone verification (SMS OTP via Termii) is a hard gate before submission.
+  const { data: profile } = await service
+    .from('profiles')
+    .select('phone_verified')
+    .eq('id', user.id)
+    .single()
+  if (!profile?.phone_verified) {
+    return NextResponse.json(
+      { error: 'Please verify your phone number before submitting your application.' },
+      { status: 403 }
+    )
+  }
 
   // Resubmission of a corrected, previously rejected application — route it
   // back to the stage that rejected it (or ICT if unknown).
