@@ -56,7 +56,7 @@ function initial(reg: OfficeRegistration | null): FormState {
     date_of_birth: reg?.date_of_birth ?? '',
     gender: reg?.gender ?? '',
     phone_number: reg?.phone_number ?? '',
-    email: reg?.email ?? '',
+    email: reg?.email?.endsWith('@cjtf.internal') ? '' : (reg?.email ?? ''),
     residential_address: reg?.residential_address ?? '',
     nin: reg?.nin ?? '',
     bvn: reg?.bvn ?? '',

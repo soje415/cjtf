@@ -129,7 +129,7 @@ export default function ApplicationForm({
       lga_of_residence: existingApplication.lga_of_residence ?? '',
       residential_address: existingApplication.residential_address,
       phone_number: existingApplication.phone_number,
-      email: existingApplication.email,
+      email: existingApplication.email?.endsWith('@cjtf.internal') ? '' : existingApplication.email,
       bvn: existingApplication.bvn ?? '',
       means_of_id_type: existingApplication.means_of_id_type ?? '',
       means_of_id_number: existingApplication.means_of_id_number ?? '',
