@@ -23,10 +23,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: 'Invalid application state' }, { status: 400 })
   }
 
-  // Legacy members are already vetted — skip INT screening and go straight
-  // to Admin approval. New recruits still go through Intelligence.
-  const isLegacy = app.membership_type === 'legacy'
-  const targetStatus = isLegacy ? 'PENDING_ADMIN_APPROVAL' : 'PENDING_INT_SCREENING'
+  // Every applicant — new and legacy — goes through Intelligence screening
+  // before Admin approval.
+  const targetStatus = 'PENDING_INT_SCREENING'
 
   // Guard the write on the status we validated above, not just the id. Without
   // it, two quick clicks both pass the check and both write, duplicating the
@@ -54,18 +53,15 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     })
   }
 
-  // Notify the next stage: Admin directly for legacy members (INT is skipped),
-  // INT officers otherwise.
+  // Notify INT officers that a new application is ready for screening.
   const { data: nextOfficers } = await service
     .from('profiles')
     .select('phone')
-    .eq('role', isLegacy ? 'admin' : 'int')
+    .eq('role', 'int')
   const nextPhones = (nextOfficers ?? []).map((p) => p.phone).filter(Boolean) as string[]
   await sendSms(
     nextPhones,
-    isLegacy
-      ? `CJTF Portal: Legacy member ${app.first_name} ${app.last_name} has been verified by ICT and is ready for Command approval.`
-      : `CJTF Portal: Application from ${app.first_name} ${app.last_name} has been verified by ICT and is ready for Intelligence screening.`
+    `CJTF Portal: Application from ${app.first_name} ${app.last_name} has been verified by ICT and is ready for Intelligence screening.`
   )
 
   return NextResponse.json({ ok: true })

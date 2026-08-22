@@ -26,12 +26,13 @@ export default function AdminApplicationReview({ application, payments, notes }:
   const router = useRouter()
   const [note, setNote] = useState('')
   const isLegacy = application.membership_type === 'legacy'
-  // Prefilled with INT's recommendation (or, for legacy members who skip INT,
-  // their own self-reported rank) so approving with it is one click and
-  // overriding is a deliberate act.
+  // Prefilled with INT's recommendation (legacy members also self-report a
+  // rank, used only as a fallback) so approving is one click and overriding is
+  // a deliberate act.
   const [rank, setRank] = useState<CjtfRank>(
     (application.cjtf_rank as CjtfRank | null)
-      ?? ((isLegacy ? application.self_reported_rank : application.recommended_rank) as CjtfRank | null)
+      ?? (application.recommended_rank as CjtfRank | null)
+      ?? ((isLegacy ? application.self_reported_rank : null) as CjtfRank | null)
       ?? DEFAULT_RECOMMENDED_RANK
   )
   const [loading, setLoading] = useState<'approve' | 'reject' | null>(null)
@@ -242,14 +243,14 @@ export default function AdminApplicationReview({ application, payments, notes }:
             </SelectContent>
           </Select>
           <p className="text-xs text-gray-400">
-            {isLegacy ? (
-              application.self_reported_rank
-                ? <>Applicant self-reported <span className="font-semibold text-amber-700">{application.self_reported_rank}</span> (legacy member, unverified by Intelligence). Command&apos;s choice here is what prints on the ID card.</>
-                : <>No rank was self-reported. This is what prints on the ID card.</>
-            ) : application.recommended_rank ? (
-              <>Intelligence recommended <span className="font-semibold text-purple-700">{application.recommended_rank}</span>. Command&apos;s choice here is what prints on the ID card.</>
+            {application.recommended_rank ? (
+              <>Intelligence recommended <span className="font-semibold text-purple-700">{application.recommended_rank}</span>.</>
             ) : (
-              <>No rank was recommended by Intelligence. This is what prints on the ID card.</>
+              <>No rank was recommended by Intelligence.</>
+            )}{' '}
+            Command&apos;s choice here is what prints on the ID card.
+            {isLegacy && application.self_reported_rank && (
+              <> Applicant self-reported <span className="font-semibold text-amber-700">{application.self_reported_rank}</span>.</>
             )}
           </p>
         </div>

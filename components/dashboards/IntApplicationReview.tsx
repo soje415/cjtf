@@ -96,6 +96,36 @@ export default function IntApplicationReview({ application, notes }: Props) {
         </Card>
       </div>
 
+      {application.membership_type === 'legacy' && (
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Existing Membership Claim (Legacy)</CardTitle></CardHeader>
+          <CardContent className="text-sm space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <p className="text-gray-500 text-xs">Self-Reported Rank</p>
+                <p className="font-medium">{application.self_reported_rank || '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs">Old CJTF ID / Rank Card No.</p>
+                <p className="font-medium">{application.legacy_id_number || '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs">Vouching Officer</p>
+                <p className="font-medium">{application.vouching_officer_name || '—'}</p>
+              </div>
+              <div>
+                <p className="text-gray-500 text-xs">Vouching Note</p>
+                {application.vouching_doc_url ? (
+                  <a href={application.vouching_doc_url} target="_blank" rel="noreferrer" className="font-medium text-cjtf-green underline">View document</a>
+                ) : (
+                  <p className="font-medium">Not provided</p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm">Next of Kin</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-3 gap-3 text-sm">

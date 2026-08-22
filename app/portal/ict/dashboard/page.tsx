@@ -55,6 +55,21 @@ export default async function IctDashboard() {
     .limit(20)
   const officeDrafts = (officeDraftRows ?? []) as OfficeRegistration[]
 
+  // Awaiting payment — ICT collects the fee here ("I have paid" / bank transfer).
+  const { data: paymentRows } = await service
+    .from('applications')
+    .select('*')
+    .eq('status', 'PENDING_PAYMENT')
+    .order('submitted_at', { ascending: true })
+  const pendingPayment = (paymentRows ?? []) as Application[]
+
+  const { data: officePaymentRows } = await service
+    .from('office_registrations')
+    .select('*')
+    .eq('status', 'PENDING_PAYMENT')
+    .order('submitted_at', { ascending: true })
+  const pendingPaymentOffices = (officePaymentRows ?? []) as OfficeRegistration[]
+
   return (
     <div className="space-y-6">
       <div>
@@ -99,6 +114,36 @@ export default async function IctDashboard() {
 
       <ApplicationTable title="Pending ICT Verification" apps={apps} actionLabel="Review & Verify" />
       <ApplicationTable title="Ready for ID Generation" apps={idApps} actionLabel="Generate ID Card" />
+
+      {(pendingPayment.length > 0 || pendingPaymentOffices.length > 0) && (
+        <Card>
+          <CardHeader><CardTitle className="text-base">Awaiting Payment</CardTitle></CardHeader>
+          <CardContent>
+            {pendingPayment.map((p) => (
+              <div key={p.id} className="flex items-center justify-between border-b last:border-0 py-2 text-sm">
+                <div>
+                  <p className="font-medium text-gray-800">{p.first_name} {p.last_name}</p>
+                  <p className="text-xs text-gray-500">Applicant · {MEMBERSHIP_TYPE_LABELS[p.membership_type]} · {STATUS_LABELS[p.status]}</p>
+                </div>
+                <LinkButton href={`/portal/staff/application/${p.id}`} size="sm" className="text-xs bg-cjtf-green text-white hover:bg-cjtf-green-dark">
+                  Collect Payment
+                </LinkButton>
+              </div>
+            ))}
+            {pendingPaymentOffices.map((o) => (
+              <div key={o.id} className="flex items-center justify-between border-b last:border-0 py-2 text-sm">
+                <div>
+                  <p className="font-medium text-gray-800">{o.office_name || '—'}</p>
+                  <p className="text-xs text-gray-500">Office · {o.first_name} {o.last_name} · {OFFICE_STATUS_LABELS[o.status]}</p>
+                </div>
+                <LinkButton href={`/portal/staff/office/${o.id}`} size="sm" className="text-xs bg-cjtf-green text-white hover:bg-cjtf-green-dark">
+                  Collect Payment
+                </LinkButton>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Office permits to generate + print (handed off by Admin) */}
       <Card>

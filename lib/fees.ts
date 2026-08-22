@@ -35,7 +35,8 @@ export const OFFICE_FEE_KOBO = koboFromEnv(process.env.NEXT_PUBLIC_OFFICE_FEE_KO
 
 /**
  * Reduced fee for already-recognised members being digitised into the portal
- * — ₦3,000, just for the ID card, since they skip INT screening entirely.
+ * — ₦3,000, for the ID card. Legacy members still go through the full
+ * ICT → INT → Admin pipeline.
  */
 export const LEGACY_REGISTRATION_FEE_KOBO = koboFromEnv(
   process.env.NEXT_PUBLIC_LEGACY_REGISTRATION_FEE_KOBO,

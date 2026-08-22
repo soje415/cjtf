@@ -12,8 +12,8 @@ export type ApplicationStatus =
   | 'REJECTED'
 
 // 'legacy' applicants are already-recognised CJTF members being digitised
-// into the portal — they pay a reduced fee and skip PENDING_INT_SCREENING
-// entirely (see app/api/applications/[id]/forward/route.ts).
+// into the portal — they pay a reduced fee and still go through the full
+// ICT → INT → Admin pipeline.
 export type MembershipType = 'new' | 'legacy'
 
 // 'id_card' and 'training' are legacy: applicants now pay one 'registration' fee.
