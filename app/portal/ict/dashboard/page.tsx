@@ -64,13 +64,13 @@ export default async function IctDashboard() {
 
       <Card>
         <CardContent className="flex flex-wrap gap-3 pt-6">
-          <LinkButton href="/portal/staff/register?mode=applicant" className="bg-cjtf-green hover:bg-cjtf-green-dark">
+          <LinkButton href="/portal/staff/application/new?type=new" className="bg-cjtf-green hover:bg-cjtf-green-dark">
             + New Applicant
           </LinkButton>
-          <LinkButton href="/portal/staff/register?mode=applicant&type=legacy" variant="outline" className="border-cjtf-green text-cjtf-green hover:bg-cjtf-green-light">
+          <LinkButton href="/portal/staff/application/new?type=legacy" variant="outline" className="border-cjtf-green text-cjtf-green hover:bg-cjtf-green-light">
             + New Legacy Member
           </LinkButton>
-          <LinkButton href="/portal/staff/register?mode=office" variant="outline" className="border-cjtf-blue text-cjtf-blue hover:bg-cjtf-blue-light">
+          <LinkButton href="/portal/staff/office/new" variant="outline" className="border-cjtf-blue text-cjtf-blue hover:bg-cjtf-blue-light">
             + New Office Registration
           </LinkButton>
         </CardContent>

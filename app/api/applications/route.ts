@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
+import { randomUUID } from 'crypto'
+import { canRegister } from '@/lib/roles'
 
 export async function POST(req: Request) {
   const supabase = createClient()
@@ -9,6 +11,41 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const service = createServiceClient()
+  const body = await req.json().catch(() => ({}))
+  const membershipType = body?.membershipType === 'legacy' ? 'legacy' : 'new'
+
+  const { data: callerProfile } = await service
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  // ICT/Admin create the blank applicant identity + DRAFT in one step — the
+  // real name/email/phone are filled in the form afterwards. The applicant has
+  // no login (random, never-shared credentials).
+  if (canRegister(callerProfile?.role)) {
+    const email = `applicant-${randomUUID()}@cjtf.internal`
+    const { data: created, error: createErr } = await service.auth.admin.createUser({
+      email,
+      password: randomUUID(),
+      email_confirm: true,
+      user_metadata: { role: 'applicant' },
+    })
+    if (createErr || !created?.user) {
+      return NextResponse.json({ error: createErr?.message ?? 'Could not create the applicant record.' }, { status: 500 })
+    }
+    await service.from('profiles').upsert(
+      { id: created.user.id, role: 'applicant', full_name: '' },
+      { onConflict: 'id' }
+    )
+    const { data, error } = await service
+      .from('applications')
+      .insert({ applicant_id: created.user.id, status: 'DRAFT', email, membership_type: membershipType })
+      .select()
+      .single()
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ application: data }, { status: 201 })
+  }
 
   // Check for existing non-rejected application
   const { data: existing } = await service
@@ -19,12 +56,6 @@ export async function POST(req: Request) {
     .maybeSingle()
 
   if (existing) return NextResponse.json({ application: existing })
-
-  // membership_type is only ever set here, at creation — never patchable
-  // afterward (see the PATCH allowlist in [id]/route.ts), so an applicant
-  // can't create as 'new' and flip to 'legacy' to dodge the full fee.
-  const body = await req.json().catch(() => ({}))
-  const membershipType = body?.membershipType === 'legacy' ? 'legacy' : 'new'
 
   const { data, error } = await service
     .from('applications')
