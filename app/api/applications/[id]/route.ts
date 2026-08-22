@@ -71,6 +71,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     // and must stay immutable, otherwise an applicant could create as 'new'
     // and flip to 'legacy' right before paying to dodge the full fee.
     'self_reported_rank','legacy_id_number','vouching_officer_name','vouching_doc_url',
+    'sector_command','sub_sector','unit',
   ]
   const updates: Record<string, unknown> = {}
   for (const key of allowed) {
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const service = createServiceClient()
   const { data: app } = await service
     .from('applications')
-    .select('applicant_id, status, membership_type, first_name, last_name, phone_number, passport_photo_url, rejected_by_role, identity_verified, identity_verify_waived, self_reported_rank, vouching_officer_name, vouching_doc_url')
+    .select('applicant_id, status, membership_type, first_name, last_name, phone_number, passport_photo_url, rejected_by_role, identity_verified, identity_verify_waived, self_reported_rank, vouching_officer_name, vouching_doc_url, sector_command, sub_sector, unit')
     .eq('id', params.id)
     .single()
 
@@ -120,7 +121,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: 'Already submitted' }, { status: 400 })
   }
 
-  const required = ['first_name','last_name','phone_number','passport_photo_url']
+  const required = ['first_name','last_name','phone_number','passport_photo_url','sector_command','sub_sector']
   if (app.membership_type === 'legacy') {
     required.push('self_reported_rank', 'vouching_officer_name', 'vouching_doc_url')
   }

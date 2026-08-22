@@ -66,6 +66,9 @@ export type FormData = {
   legacy_id_number: string
   vouching_officer_name: string
   vouching_doc_url: string
+  sector_command: string
+  sub_sector: string
+  unit: string
 }
 
 const EMPTY_FORM: FormData = {
@@ -81,6 +84,7 @@ const EMPTY_FORM: FormData = {
   passport_photo_url: '', id_document_url: '', birth_cert_url: '',
   guarantor_form_url: '', age_declaration_url: '',
   self_reported_rank: '', legacy_id_number: '', vouching_officer_name: '', vouching_doc_url: '',
+  sector_command: '', sub_sector: '', unit: '',
 }
 
 export default function ApplicationForm({
@@ -150,6 +154,9 @@ export default function ApplicationForm({
       legacy_id_number: existingApplication.legacy_id_number ?? '',
       vouching_officer_name: existingApplication.vouching_officer_name ?? '',
       vouching_doc_url: existingApplication.vouching_doc_url ?? '',
+      sector_command: existingApplication.sector_command ?? '',
+      sub_sector: existingApplication.sub_sector ?? '',
+      unit: existingApplication.unit ?? '',
     } : {}),
   })
 

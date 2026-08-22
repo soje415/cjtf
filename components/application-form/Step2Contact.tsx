@@ -31,10 +31,11 @@ export default function Step2Contact({ form, update, saveProgress, saving, onNex
 
   const valid =
     form.phone_number &&
-    form.email &&
     form.residential_address &&
     form.state_of_residence &&
-    form.lga_of_residence
+    form.lga_of_residence &&
+    form.sector_command &&
+    form.sub_sector
 
   return (
     <Card>
@@ -45,7 +46,7 @@ export default function Step2Contact({ form, update, saveProgress, saving, onNex
             <Input type="tel" value={form.phone_number} onChange={(e) => update({ phone_number: e.target.value })} placeholder="0801 234 5678" />
           </div>
           <div className="space-y-1">
-            <Label>Email Address *</Label>
+            <Label>Email Address (optional)</Label>
             <Input type="email" value={form.email} onChange={(e) => update({ email: e.target.value })} placeholder="you@example.com" />
           </div>
         </div>
@@ -77,6 +78,36 @@ export default function Step2Contact({ form, update, saveProgress, saving, onNex
             placeholder="House number, street, town"
             rows={3}
           />
+        </div>
+
+        <div className="border-t pt-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">Deployment / Posting</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-1">
+              <Label>Sector Command *</Label>
+              <Input
+                value={form.sector_command}
+                onChange={(e) => update({ sector_command: e.target.value })}
+                placeholder="e.g. FCT Command"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Sub Sector *</Label>
+              <Input
+                value={form.sub_sector}
+                onChange={(e) => update({ sub_sector: e.target.value })}
+                placeholder="e.g. Garki Sub Sector"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Unit (optional)</Label>
+              <Input
+                value={form.unit}
+                onChange={(e) => update({ unit: e.target.value })}
+                placeholder="e.g. Area Council Unit"
+              />
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

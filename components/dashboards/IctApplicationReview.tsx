@@ -249,6 +249,9 @@ export default function IctApplicationReview({ application, payments, notes }: P
                 issueDate={issueDate}
                 holderSignatureUrl={holderSig}
                 officerSignatureUrl={officerSig}
+                sectorCommand={application.sector_command}
+                subSector={application.sub_sector}
+                unit={application.unit}
               />
             </div>
           </div>
@@ -333,6 +336,9 @@ export default function IctApplicationReview({ application, payments, notes }: P
               ['Phone', application.phone_number],
               ['Email', application.email],
               ['Address', application.residential_address],
+              ['Sector Command', application.sector_command || '—'],
+              ['Sub Sector', application.sub_sector || '—'],
+              ['Unit', application.unit || '—'],
             ].map(([label, value]) => (
               <div key={label}>
                 <p className="text-gray-500 text-xs">{label}</p>

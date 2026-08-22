@@ -42,6 +42,9 @@ type FormState = {
   office_photo_urls: string[]
   district_head_name: string
   endorsement_doc_url: string
+  sector_command: string
+  sub_sector: string
+  unit: string
 }
 
 function initial(reg: OfficeRegistration | null): FormState {
@@ -69,6 +72,9 @@ function initial(reg: OfficeRegistration | null): FormState {
     office_photo_urls: reg?.office_photo_urls ?? [],
     district_head_name: reg?.district_head_name ?? '',
     endorsement_doc_url: reg?.endorsement_doc_url ?? '',
+    sector_command: reg?.sector_command ?? '',
+    sub_sector: reg?.sub_sector ?? '',
+    unit: reg?.unit ?? '',
   }
 }
 
@@ -346,6 +352,7 @@ function StepOffice({ form, update, saving, localities, onBack, onNext }: {
   const REQUIRED: [keyof FormState, string][] = [
     ['office_name', 'Office name'], ['area_council', 'Area council'],
     ['district', 'District'], ['office_address', 'Office address'],
+    ['sector_command', 'Sector Command'], ['sub_sector', 'Sub Sector'],
   ]
   const missing = REQUIRED.filter(([k]) => !form[k]).map(([, l]) => l)
 
@@ -379,6 +386,18 @@ function StepOffice({ form, update, saving, localities, onBack, onNext }: {
           <Textarea value={form.office_address} onChange={(e) => update({ office_address: e.target.value })} placeholder="Full street address of the office" /></div>
         <div className="space-y-1"><Label>Nearest Landmark (optional)</Label>
           <Input value={form.landmark} onChange={(e) => update({ landmark: e.target.value })} placeholder="e.g. Opposite Kaita Plaza" /></div>
+
+        <div className="border-t pt-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">Deployment / Posting</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-1"><Label>Sector Command *</Label>
+              <Input value={form.sector_command} onChange={(e) => update({ sector_command: e.target.value })} placeholder="e.g. FCT Command" /></div>
+            <div className="space-y-1"><Label>Sub Sector *</Label>
+              <Input value={form.sub_sector} onChange={(e) => update({ sub_sector: e.target.value })} placeholder="e.g. Garki Sub Sector" /></div>
+            <div className="space-y-1"><Label>Unit (optional)</Label>
+              <Input value={form.unit} onChange={(e) => update({ unit: e.target.value })} placeholder="e.g. Area Council Unit" /></div>
+          </div>
+        </div>
 
         {missing.length > 0 && (
           <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">Please complete: {missing.join(', ')}.</p>

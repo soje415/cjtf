@@ -387,6 +387,10 @@ export interface IdCardBackPreviewProps {
   designation?: string
   issueDate?: string
   expiryDate?: string
+  /** Deployment posting, printed on the back. */
+  sectorCommand?: string | null
+  subSector?: string | null
+  unit?: string | null
   /** Signature images (PNG data URL or public URL), captured by ICT at issue. */
   holderSignatureUrl?: string | null
   officerSignatureUrl?: string | null
@@ -405,6 +409,7 @@ export function IdCardBackPreview({
   cjtfId, designation, issueDate,
   expiryDate = cardExpiryDate(issueDate),
   holderSignatureUrl, officerSignatureUrl,
+  sectorCommand, subSector, unit,
 }: IdCardBackPreviewProps) {
   // Same footprint as the front so the two pages line up when printed.
   const STRIPE = 21
@@ -477,6 +482,9 @@ export function IdCardBackPreview({
                 {expiryDate && <div style={{ flex: 1 }}><BackField label="Expires" value={expiryDate} /></div>}
               </div>
               <BackField label="CJTF ID" value={cjtfId} />
+              {sectorCommand && <BackField label="Sector Command" value={sectorCommand} />}
+              {subSector && <BackField label="Sub Sector" value={subSector} />}
+              {unit && <BackField label="Unit" value={unit} />}
 
               {/* Fills what was dead space under the reference block, and puts the
                   recovery instruction on the face someone actually turns over. */}

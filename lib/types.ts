@@ -110,6 +110,10 @@ export interface Application {
   legacy_id_number: string | null
   vouching_officer_name: string | null
   vouching_doc_url: string | null
+  // deployment posting — printed on the back of the ID card
+  sector_command: string | null
+  sub_sector: string | null
+  unit: string | null
   // signatures printed on the ID card back, captured by ICT at issue
   holder_signature_url: string | null
   officer_signature_url: string | null
@@ -226,6 +230,10 @@ export interface OfficeRegistration {
   office_photo_urls: string[]
   district_head_name: string | null
   endorsement_doc_url: string | null
+  // deployment posting (collected only, not printed on the permit)
+  sector_command: string | null
+  sub_sector: string | null
+  unit: string | null
   cert_number: string | null
   cert_pdf_url: string | null
   rejected_by_role: Role | null

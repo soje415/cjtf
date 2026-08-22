@@ -62,6 +62,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     'office_name', 'office_designation', 'area_council', 'district',
     'office_address', 'landmark', 'office_photo_urls',
     'district_head_name', 'endorsement_doc_url',
+    'sector_command', 'sub_sector', 'unit',
   ]
   const updates: Record<string, unknown> = {}
   for (const key of allowed) {
@@ -94,7 +95,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const service = createServiceClient()
   const { data: reg } = await service
     .from('office_registrations')
-    .select('registrant_id, status, first_name, last_name, phone_number, office_name, area_council, district, office_address, office_photo_urls, rejected_by_role, identity_verified, identity_verify_waived')
+    .select('registrant_id, status, first_name, last_name, phone_number, office_name, area_council, district, office_address, office_photo_urls, rejected_by_role, identity_verified, identity_verify_waived, sector_command, sub_sector, unit')
     .eq('id', params.id)
     .single()
 
@@ -120,6 +121,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     ['area_council', reg.area_council],
     ['district', reg.district],
     ['office_address', reg.office_address],
+    ['sector_command', reg.sector_command],
+    ['sub_sector', reg.sub_sector],
   ]
   for (const [field, value] of required) {
     if (!value) return NextResponse.json({ error: `Missing required field: ${field}` }, { status: 400 })
