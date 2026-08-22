@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
@@ -142,9 +143,23 @@ function PostingField({ label, value }: { label: string; value?: string | null }
 
 export function IdCardPreview({
   fullName, cjtfId, stateOfOrigin, lga, dateOfBirth, gender, bloodGroup,
-  designation = 'VOLUNTEER MEMBER', photoUrl,
+  designation = 'VOLUNTEER MEMBER', photoUrl, verifyUrl, qrDataUrl: qrDataUrlProp,
   sectorCommand, subSector, unit,
 }: IdCardPreviewProps) {
+  const [qrDataUrlState, setQrDataUrlState] = useState<string | null>(null)
+  const mounted = useRef(true)
+
+  useEffect(() => {
+    mounted.current = true
+    if (qrDataUrlProp || !verifyUrl) return
+    import('qrcode').then(QRCode => QRCode.toDataURL(verifyUrl, { width: 96, margin: 1 }))
+      .then(url => { if (mounted.current) setQrDataUrlState(url) })
+      .catch(() => {})
+    return () => { mounted.current = false }
+  }, [verifyUrl, qrDataUrlProp])
+
+  const qrDataUrl = qrDataUrlProp || qrDataUrlState
+
   // 342 × 216 px  (≈ 2× CR80)
   const STRIPE = 21   // left stripe total width
   const CARD_W = 342
@@ -271,6 +286,32 @@ export function IdCardPreview({
               <SmallField label="State of Origin" value={stateOfOrigin} />
               <SmallField label="LGA" value={lga} />
             </div>
+          </div>
+
+          {/* QR column */}
+          <div style={{ width: 50, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+            <div style={{
+              background: '#fff', padding: 2, borderRadius: 2,
+              border: `1px solid ${C.green}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              {qrDataUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={qrDataUrl} alt="QR" style={{ width: 44, height: 44, display: 'block' }} />
+              ) : (
+                <div style={{ width: 44, height: 44, background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: verifyUrl ? 5 : 7, color: '#9ca3af' }}>
+                  {verifyUrl ? 'Loading…' : 'QR'}
+                </div>
+              )}
+            </div>
+            <p style={{ fontSize: 5, color: C.grey, textAlign: 'center', margin: 0 }}>Scan to{'\n'}Verify</p>
+
+            {/* Ghosted repeat of the passport photo beneath the QR — a cheap
+                tamper check. */}
+            {photoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={photoUrl} alt="" crossOrigin="anonymous"
+                style={{ width: 34, height: 40, objectFit: 'cover', opacity: 0.16, borderRadius: 1 }} />
+            )}
           </div>
         </div>
 

@@ -50,7 +50,9 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
   }
 
   try {
-    const email = reg.email || user.email!
+    // Unique per registration — never fall back to the staff member's email,
+    // which would share one Hyparrow customer across registrations.
+    const email = reg.email || `office-${reg.id.slice(0, 8)}@cjtf.internal`
     const phoneNumber = reg.phone_number || ''
     let customerId = reg.hyparrow_customer_id
     let va: VirtualAccount | null = null

@@ -65,7 +65,10 @@ export async function POST(req: Request) {
     })
   }
 
-  const email = app.email || user.email!
+  // Unique per application: a blank email must NOT fall back to the staff
+  // member's email — that would collide with every other applicant who also
+  // left email blank and route their payments onto one shared Hyparrow customer.
+  const email = app.email || `applicant-${app.id.slice(0, 8)}@cjtf.internal`
   const phoneNumber = app.phone_number || ''
 
   // Issue a new virtual account: create the Hyparrow customer (once) then the NUBAN.

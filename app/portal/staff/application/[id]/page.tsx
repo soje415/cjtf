@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import ApplicationForm from '@/components/application-form/ApplicationForm'
 import VirtualAccountPayment from '@/components/dashboards/VirtualAccountPayment'
 import OpayUssdPayment from '@/components/dashboards/OpayUssdPayment'
+import MarkPaidButton from '@/components/dashboards/MarkPaidButton'
 import { canRegister } from '@/lib/roles'
 import { Badge } from '@/components/ui/badge'
 import { STATUS_LABELS, STATUS_COLORS, Application } from '@/lib/types'
@@ -70,6 +71,7 @@ export default async function StaffApplicationPage({ params }: { params: { id: s
           redirectPath={`/portal/staff/application/${app.id}`}
         />
         <OpayUssdPayment applicationId={app.id} redirectPath={`/portal/staff/application/${app.id}`} />
+        <MarkPaidButton applicationId={app.id} redirectPath={`/portal/staff/application/${app.id}`} />
       </div>
     )
   }

@@ -2,6 +2,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import OfficeRegistrationForm, { Locality } from '@/components/office-form/OfficeRegistrationForm'
 import OfficeVirtualAccountPayment from '@/components/office-form/OfficeVirtualAccountPayment'
+import MarkPaidButton from '@/components/dashboards/MarkPaidButton'
 import { canRegister } from '@/lib/roles'
 import { Badge } from '@/components/ui/badge'
 import { OFFICE_STATUS_LABELS, OFFICE_STATUS_COLORS, OfficeRegistration } from '@/lib/types'
@@ -76,6 +77,7 @@ export default async function StaffOfficePage({ params }: { params: { id: string
           officeName={reg.office_name ?? 'office'}
           redirectPath={`/portal/staff/office/${reg.id}`}
         />
+        <MarkPaidButton officeRegistrationId={reg.id} redirectPath={`/portal/staff/office/${reg.id}`} />
       </div>
     )
   }
