@@ -49,7 +49,7 @@ export default async function StaffApplicationPage({ params }: { params: { id: s
           existingApplication={app}
           userId={app.applicant_id}
           membershipType={app.membership_type}
-          afterSubmitPath={`/portal/staff/application/${app.id}`}
+          onBehalf
         />
       </div>
     )

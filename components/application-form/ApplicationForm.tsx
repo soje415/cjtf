@@ -88,13 +88,13 @@ export default function ApplicationForm({
   userId,
   membershipType,
   phoneVerified,
-  afterSubmitPath,
+  onBehalf,
 }: {
   existingApplication: Application | null
   userId: string
   membershipType: 'new' | 'legacy'
   phoneVerified?: boolean
-  afterSubmitPath?: string | ((appId: string) => string)
+  onBehalf?: boolean
 }) {
   const router = useRouter()
   const [step, setStep] = useState(0)
@@ -232,8 +232,7 @@ export default function ApplicationForm({
       }
 
       toast.success('Application submitted! Please pay the application fee to complete your submission.')
-      const dest = typeof afterSubmitPath === 'function' ? afterSubmitPath(appId) : (afterSubmitPath ?? '/portal/applicant/payment')
-      router.push(dest)
+      router.push(onBehalf ? `/portal/staff/application/${appId}` : '/portal/applicant/payment')
     } catch {
       toast.error('Network error. Please try again.')
       setSaving(false)

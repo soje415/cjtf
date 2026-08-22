@@ -60,7 +60,7 @@ export default async function StaffOfficePage({ params }: { params: { id: string
         <OfficeRegistrationForm
           existing={reg}
           localities={localities}
-          afterSubmitPath={`/portal/staff/office/${reg.id}`}
+          onBehalf
         />
       </div>
     )

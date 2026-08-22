@@ -38,7 +38,7 @@ export default async function StaffNewApplicationPage({
         existingApplication={null}
         userId={user.id}
         membershipType={membershipType}
-        afterSubmitPath={(id) => `/portal/staff/application/${id}`}
+        onBehalf
       />
     </div>
   )

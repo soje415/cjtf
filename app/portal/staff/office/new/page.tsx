@@ -43,7 +43,7 @@ export default async function StaffNewOfficePage() {
       <OfficeRegistrationForm
         existing={null}
         localities={localities}
-        afterSubmitPath={(id) => `/portal/staff/office/${id}`}
+        onBehalf
       />
     </div>
   )
