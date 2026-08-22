@@ -1,14 +1,16 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import RegisterForm from './RegisterForm'
+import StaffLoginForm from './StaffLoginForm'
 
-export default function RegisterPage({ searchParams }: { searchParams: { error?: string; next?: string; role?: string } }) {
-  const next = searchParams.next
+// Registration is staff-only: this page is now a staff-authorization gate.
+// The public self-service signup is gone — only ICT/Admin can log in here and
+// then register applicants/offices on the public's behalf.
+export default function RegisterPage({
+  searchParams,
+}: {
+  searchParams: { error?: string; next?: string; role?: string }
+}) {
   const isOffice = searchParams.role === 'office'
-  const loginParams = new URLSearchParams()
-  if (next) loginParams.set('next', next)
-  if (isOffice) loginParams.set('role', 'office')
-  const loginHref = loginParams.size ? `/auth/login?${loginParams}` : '/auth/login'
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(135deg, #09ADE2 0%, #0790BC 100%)' }}>
       <div className="h-2 flex">
@@ -29,13 +31,11 @@ export default function RegisterPage({ searchParams }: { searchParams: { error?:
                 className="rounded-full border-4 border-cjtf-yellow shadow-lg"
               />
             </div>
-            <h1 className="text-xl font-bold text-gray-800">
-              {isOffice ? 'Create Account' : 'Create Applicant Account'}
-            </h1>
+            <h1 className="text-xl font-bold text-gray-800">Staff Authorization</h1>
             <p className="text-xs text-gray-500 mt-1">
               {isOffice
-                ? 'Register to submit your Office Registration and Operational Permit application'
-                : 'Register to begin your CJTF recruitment application'}
+                ? 'Office registration is restricted. Only ICT or Admin staff can register an office.'
+                : 'Registration is restricted. Only ICT or Admin staff can register an applicant.'}
             </p>
           </div>
 
@@ -46,12 +46,11 @@ export default function RegisterPage({ searchParams }: { searchParams: { error?:
               </div>
             )}
 
-            <RegisterForm next={next} role={isOffice ? 'office' : undefined} submitLabel={isOffice ? 'Create Account' : undefined} />
+            <StaffLoginForm mode={isOffice ? 'office' : 'applicant'} />
 
             <p className="text-center text-sm text-gray-500 mt-4">
-              Already registered?{' '}
-              <Link href={loginHref} className="text-cjtf-blue font-medium hover:underline">
-                Sign in here
+              <Link href="/auth/login" className="text-cjtf-blue font-medium hover:underline">
+                ← Back to sign in
               </Link>
             </p>
           </div>

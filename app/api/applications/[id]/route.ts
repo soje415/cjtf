@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
 import { sendSms } from '@/lib/termii'
-
-const STAFF_ROLES = ['ict', 'int', 'admin', 'executive']
+import { STAFF_ROLES, canRegister } from '@/lib/roles'
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -37,14 +36,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const body = await req.json()
   const service = createServiceClient()
 
-  // Verify ownership and DRAFT status
+  // Verify ownership and DRAFT status (ICT/Admin may edit on behalf of the applicant).
   const { data: app } = await service
     .from('applications')
     .select('applicant_id, status')
     .eq('id', params.id)
     .single()
 
-  if (!app || app.applicant_id !== user.id) {
+  const { data: callerProfile } = await service
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (!app || (app.applicant_id !== user.id && !canRegister(callerProfile?.role))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
   if (app.status !== 'DRAFT' && app.status !== 'REJECTED') {
@@ -103,7 +107,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     .eq('id', params.id)
     .single()
 
-  if (!app || app.applicant_id !== user.id) {
+  const { data: callerProfile } = await service
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (!app || (app.applicant_id !== user.id && !canRegister(callerProfile?.role))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
   const isResubmit = app.status === 'REJECTED'
