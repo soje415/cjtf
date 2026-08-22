@@ -227,13 +227,15 @@ export default function IctApplicationReview({ application, payments, notes }: P
                 lga={application.lga_of_origin}
                 dateOfBirth={dateOfBirth}
                 gender={application.gender ?? ''}
-                nin={application.nin ?? undefined}
                 bloodGroup={application.blood_group ?? undefined}
                 designation={rankForCard(application.cjtf_rank)}
                 issueDate={issueDate}
                 photoUrl={photoDataUrl ?? application.passport_photo_url ?? ''}
                 verifyUrl={verifyUrl}
                 qrDataUrl={qrDataUrl}
+                sectorCommand={application.sector_command}
+                subSector={application.sub_sector}
+                unit={application.unit}
               />
             </div>
           </div>
@@ -249,9 +251,6 @@ export default function IctApplicationReview({ application, payments, notes }: P
                 issueDate={issueDate}
                 holderSignatureUrl={holderSig}
                 officerSignatureUrl={officerSig}
-                sectorCommand={application.sector_command}
-                subSector={application.sub_sector}
-                unit={application.unit}
               />
             </div>
           </div>

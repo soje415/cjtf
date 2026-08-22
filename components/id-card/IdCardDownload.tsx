@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
@@ -14,6 +13,10 @@ export interface IdCardPreviewProps {
   nin?: string
   bloodGroup?: string
   designation?: string
+  /** Deployment posting — now shown on the front, after rank. */
+  sectorCommand?: string | null
+  subSector?: string | null
+  unit?: string | null
   issueDate: string
   photoUrl: string
   verifyUrl?: string
@@ -126,30 +129,22 @@ function SmallField({ label, value }: { label: string; value: string }) {
   )
 }
 
+/** Compact label/value line for the deployment posting on the card face. */
+function PostingField({ label, value }: { label: string; value?: string | null }) {
+  if (!value) return null
+  return (
+    <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
+      <span style={{ fontSize: 4.5, color: C.grey, textTransform: 'uppercase', letterSpacing: 0.4, fontWeight: 700, flexShrink: 0, width: 58, lineHeight: 1.15 }}>{label}</span>
+      <span style={{ fontSize: 6.5, color: C.black, fontWeight: 600, lineHeight: 1.15 }}>{value}</span>
+    </div>
+  )
+}
+
 export function IdCardPreview({
-  fullName, cjtfId, stateOfOrigin, lga, dateOfBirth, gender, nin, bloodGroup,
-  designation = 'VOLUNTEER MEMBER', issueDate, photoUrl, verifyUrl, qrDataUrl: qrDataUrlProp,
+  fullName, cjtfId, stateOfOrigin, lga, dateOfBirth, gender, bloodGroup,
+  designation = 'VOLUNTEER MEMBER', photoUrl,
+  sectorCommand, subSector, unit,
 }: IdCardPreviewProps) {
-  const [qrDataUrlState, setQrDataUrlState] = useState<string | null>(null)
-  const mounted = useRef(true)
-
-  useEffect(() => {
-    mounted.current = true
-    // Generate whenever no usable QR was handed down. This used to check
-    // `qrDataUrlProp !== undefined`, but the ICT review passes its own state,
-    // which is `null` until its generation resolves — and `null !== undefined`,
-    // so the fallback short-circuited and the card rendered with no QR at all.
-    if (qrDataUrlProp || !verifyUrl) return
-    import('qrcode').then(QRCode => QRCode.toDataURL(verifyUrl, { width: 96, margin: 1 }))
-      .then(url => { if (mounted.current) setQrDataUrlState(url) })
-      .catch(() => {})
-    return () => { mounted.current = false }
-  }, [verifyUrl, qrDataUrlProp])
-
-  const qrDataUrl = qrDataUrlProp || qrDataUrlState
-
-  const expiryDate = cardExpiryDate(issueDate)
-
   // 342 × 216 px  (≈ 2× CR80)
   const STRIPE = 21   // left stripe total width
   const CARD_W = 342
@@ -220,12 +215,6 @@ export function IdCardPreview({
               Official Identification Card — Federal Republic of Nigeria
             </p>
           </div>
-          {/* National coat of arms — replaces the white "CJTF" tag that used to
-              sit here. The card already says CJTF twice in this band; the arms
-              carry the federal authority the tag never did. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/coat-of-arms.jpeg" alt="Coat of arms of Nigeria" crossOrigin="anonymous"
-            style={{ width: 30, height: 30, objectFit: 'contain', flexShrink: 0 }} />
         </div>
 
         {/* BODY */}
@@ -261,66 +250,27 @@ export function IdCardPreview({
           </div>
 
           {/* Details column */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 2 }}>
-            <p style={{ fontSize: 10, fontWeight: 700, color: C.black, margin: 0, lineHeight: 1.2 }}>{fullName}</p>
-            <p style={{ fontSize: 8, fontWeight: 700, color: C.green, letterSpacing: 0.3, margin: '1px 0 3px 0' }}>{cjtfId}</p>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 1 }}>
+            <p style={{ fontSize: 10, fontWeight: 700, color: C.black, margin: 0, lineHeight: 1.15 }}>{fullName}</p>
+            <p style={{ fontSize: 8, fontWeight: 700, color: C.green, letterSpacing: 0.3, margin: '1px 0 2px 0' }}>{cjtfId}</p>
 
-            {/* Rank — the operative fact on the card, so it reads as a filled
-                badge rather than another label/value pair lost in the grid. */}
-            <div style={{ margin: '0 0 4px 0' }}>
-              {/* Sized with generous line-height and padding rather than a tight
-                  flex box: html2canvas measures text boxes slightly differently
-                  from the browser and clips the descenders of a snug badge. */}
-              <div style={{
-                border: `0.6px solid rgba(0,135,81,0.35)`, borderRadius: 2, display: 'inline-block',
-                background: 'rgba(255,255,255,0.55)',
-                padding: '2.5px 6px 3.5px 6px', whiteSpace: 'nowrap',
-              }}>
-                <span style={{ fontSize: 7, color: C.grey, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700, lineHeight: 1.4 }}>Rank&nbsp;&nbsp;</span>
-                <span style={{ fontSize: 8.5, color: C.green, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.4 }}>{designation}</span>
-              </div>
+            {/* Rank — plain, no border so the posting fields have room. */}
+            <div style={{ margin: '0 0 1px 0' }}>
+              <span style={{ fontSize: 5.5, color: C.grey, textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700, lineHeight: 1.2 }}>Rank&nbsp;</span>
+              <span style={{ fontSize: 7.5, color: C.green, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.2 }}>{designation}</span>
             </div>
 
+            <PostingField label="Sector Command" value={sectorCommand} />
+            <PostingField label="Sub Sector" value={subSector} />
+            <PostingField label="Unit" value={unit} />
+
             {/* Small fields grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 8px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px 8px', marginTop: 2 }}>
               <SmallField label="Date of Birth" value={dateOfBirth || '—'} />
               <SmallField label="Gender" value={gender ? gender.charAt(0).toUpperCase() + gender.slice(1) : '—'} />
               <SmallField label="State of Origin" value={stateOfOrigin} />
               <SmallField label="LGA" value={lga} />
-              {nin && <SmallField label="NIN" value={nin} />}
-              <SmallField label="Issue Date" value={issueDate} />
-              <SmallField label="Expiry Date" value={expiryDate} />
             </div>
-          </div>
-
-          {/* QR column */}
-          <div style={{ width: 50, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
-            {/* The QR sits on its own solid white panel. A scanner needs the
-                quiet zone clean, and the card's watermark runs straight under
-                this column. */}
-            <div style={{
-              background: '#fff', padding: 2, borderRadius: 2,
-              border: `1px solid ${C.green}`, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              {qrDataUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={qrDataUrl} alt="QR" style={{ width: 44, height: 44, display: 'block' }} />
-              ) : (
-                <div style={{ width: 44, height: 44, background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: verifyUrl ? 5 : 7, color: '#9ca3af' }}>
-                  {verifyUrl ? 'Loading…' : 'QR'}
-                </div>
-              )}
-            </div>
-            <p style={{ fontSize: 5, color: C.grey, textAlign: 'center', margin: 0 }}>Scan to{'\n'}Verify</p>
-
-            {/* Ghosted repeat of the passport photo beneath the QR — a cheap
-                tamper check: swapping the main photo without also matching this
-                one is visible to the naked eye. */}
-            {photoUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={photoUrl} alt="" crossOrigin="anonymous"
-                style={{ width: 34, height: 40, objectFit: 'cover', opacity: 0.16, borderRadius: 1 }} />
-            )}
           </div>
         </div>
 
@@ -330,8 +280,8 @@ export function IdCardPreview({
           display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
           padding: '0 8px',
         }}>
-          <p style={{ fontSize: 4.5, color: C.white, margin: 0 }}>Property of CJTF FCT Command. If found, return to nearest CJTF office.</p>
-          <p style={{ fontSize: 4.5, color: C.gold, margin: 0, fontWeight: 700 }}>ISSUING AUTHORITY: FCT COMMAND</p>
+          <p style={{ fontSize: 4.5, color: C.white, margin: 0 }}>Property of CJTF Nigeria. If found, return to nearest CJTF office.</p>
+          <p style={{ fontSize: 4.5, color: C.gold, margin: 0, fontWeight: 700 }}>ISSUING AUTHORITY: CJTF NIGERIA</p>
         </div>
 
         {/* BLACK BOTTOM STRIPE */}
@@ -387,10 +337,6 @@ export interface IdCardBackPreviewProps {
   designation?: string
   issueDate?: string
   expiryDate?: string
-  /** Deployment posting, printed on the back. */
-  sectorCommand?: string | null
-  subSector?: string | null
-  unit?: string | null
   /** Signature images (PNG data URL or public URL), captured by ICT at issue. */
   holderSignatureUrl?: string | null
   officerSignatureUrl?: string | null
@@ -409,7 +355,6 @@ export function IdCardBackPreview({
   cjtfId, designation, issueDate,
   expiryDate = cardExpiryDate(issueDate),
   holderSignatureUrl, officerSignatureUrl,
-  sectorCommand, subSector, unit,
 }: IdCardBackPreviewProps) {
   // Same footprint as the front so the two pages line up when printed.
   const STRIPE = 21
@@ -482,9 +427,6 @@ export function IdCardBackPreview({
                 {expiryDate && <div style={{ flex: 1 }}><BackField label="Expires" value={expiryDate} /></div>}
               </div>
               <BackField label="CJTF ID" value={cjtfId} />
-              {sectorCommand && <BackField label="Sector Command" value={sectorCommand} />}
-              {subSector && <BackField label="Sub Sector" value={subSector} />}
-              {unit && <BackField label="Unit" value={unit} />}
 
               {/* Fills what was dead space under the reference block, and puts the
                   recovery instruction on the face someone actually turns over. */}
@@ -515,8 +457,7 @@ export function IdCardBackPreview({
               <div style={{ marginTop: 'auto', paddingTop: 3 }}>
                 <p style={{ fontSize: 4, color: C.grey, textTransform: 'uppercase', letterSpacing: 0.4, margin: 0 }}>Verify This Card</p>
                 <p style={{ fontSize: 4.8, color: C.black, margin: '0.5px 0 0 0', lineHeight: 1.25 }}>
-                  Scan the QR code on the front of this card, or quote the CJTF ID to any
-                  CJTF office.
+                  Quote the CJTF ID to any CJTF office to confirm this card.
                 </p>
               </div>
             </div>
