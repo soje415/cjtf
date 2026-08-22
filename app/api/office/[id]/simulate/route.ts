@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { creditOfficeRegistrationPayment } from '@/lib/notifications'
 import { OFFICE_FEE_KOBO, paymentBypassEnabled } from '@/lib/fees'
+import { canRegister } from '@/lib/roles'
 
 
 /**
@@ -29,7 +30,14 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     .eq('id', params.id)
     .maybeSingle()
 
-  if (!reg || reg.registrant_id !== user.id) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  const { data: callerProfile } = await service
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (!reg || (reg.registrant_id !== user.id && !canRegister(callerProfile?.role))) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
   if (reg.status !== 'PENDING_PAYMENT') return NextResponse.json({ paid: true })
 
   const result = await creditOfficeRegistrationPayment(service, {

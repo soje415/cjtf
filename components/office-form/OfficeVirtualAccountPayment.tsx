@@ -12,6 +12,7 @@ interface Props {
   registrationId: string
   name: string
   officeName: string
+  redirectPath?: string
 }
 
 interface AccountState {
@@ -21,7 +22,7 @@ interface AccountState {
   amount: number // kobo
 }
 
-export default function OfficeVirtualAccountPayment({ registrationId, name, officeName }: Props) {
+export default function OfficeVirtualAccountPayment({ registrationId, name, officeName, redirectPath }: Props) {
   const router = useRouter()
   const [account, setAccount] = useState<AccountState | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -66,8 +67,8 @@ export default function OfficeVirtualAccountPayment({ registrationId, name, offi
 
   function onPaid() {
     setPaid(true)
-    toast.success('Payment received! Your registration has been forwarded for INT screening.')
-    setTimeout(() => router.push('/portal/applicant/office'), 1500)
+    toast.success('Payment received! The registration has been forwarded for INT screening.')
+    setTimeout(() => router.push(redirectPath ?? '/portal/applicant/office'), 1500)
   }
 
   async function copy() {

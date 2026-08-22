@@ -4,17 +4,9 @@ import LoginForm from './LoginForm'
 
 const ROLES = [
   {
-    key: 'applicant',
-    title: 'Applicant',
-    description: 'New recruits and returning applicants checking application status.',
-    accent: '#008751',
-    iconBg: '#dcfce7',
-    icon: '👤',
-  },
-  {
     key: 'ict',
     title: 'ICT Officer',
-    description: 'Data verification staff reviewing submitted applications.',
+    description: 'Registers applicants/offices and drives each record to completion.',
     accent: '#09ADE2',
     iconBg: '#e0f2fe',
     icon: '🖥️',
@@ -43,32 +35,20 @@ const ROLES = [
     iconBg: '#e2e8f0',
     icon: '🛡️',
   },
-  {
-    key: 'office',
-    title: 'Office Registration',
-    description: 'Commanders and unit heads registering or managing a CJTF office.',
-    accent: '#0d9488',
-    iconBg: '#ccfbf1',
-    icon: '🏢',
-  },
 ]
 
 const ROLE_LABELS: Record<string, { label: string; sub: string; accent: string; back: string }> = {
-  applicant: { label: 'Applicant Portal',       sub: 'Sign in to track your application',          accent: '#008751', back: 'linear-gradient(135deg,#008751 0%,#006b40 100%)' },
-  ict:       { label: 'ICT Officer Login',       sub: 'Sign in to access the verification queue',   accent: '#09ADE2', back: 'linear-gradient(135deg,#09ADE2 0%,#0790BC 100%)' },
+  ict:       { label: 'ICT Officer Login',       sub: 'Sign in to register and process applications', accent: '#09ADE2', back: 'linear-gradient(135deg,#09ADE2 0%,#0790BC 100%)' },
   int:       { label: 'Intelligence Login',      sub: 'Sign in to access the screening queue',      accent: '#7c3aed', back: 'linear-gradient(135deg,#7c3aed 0%,#5b21b6 100%)' },
   admin:     { label: 'Admin / Command Login',   sub: 'Sign in to access the approval dashboard',   accent: '#ea580c', back: 'linear-gradient(135deg,#ea580c 0%,#c2410c 100%)' },
   executive: { label: 'Executive / DSS Login',    sub: 'Sign in to access the oversight dashboard',  accent: '#334155', back: 'linear-gradient(135deg,#334155 0%,#1e293b 100%)' },
-  office:    { label: 'Office Registration',      sub: 'Sign in to register or manage a CJTF office', accent: '#0d9488', back: 'linear-gradient(135deg,#0d9488 0%,#0f766e 100%)' },
 }
 
 const ROLE_ACCENT_TEXT: Record<string, string> = {
-  '#008751': '#4ade80',
   '#09ADE2': '#7dd3fc',
   '#7c3aed': '#c4b5fd',
   '#ea580c': '#fdba74',
   '#334155': '#cbd5e1',
-  '#0d9488': '#5eead4',
 }
 
 export default function LoginPage({
@@ -79,10 +59,6 @@ export default function LoginPage({
   const role = searchParams.role
   const roleConfig = role ? ROLE_LABELS[role] : null
   const next = searchParams.next
-  const registerParams = new URLSearchParams()
-  if (next) registerParams.set('next', next)
-  if (role === 'office') registerParams.set('role', role)
-  const registerHref = registerParams.size ? `/auth/register?${registerParams}` : '/auth/register'
 
   // ── Role picker ──────────────────────────────────────────────────────────
   if (!roleConfig) {
@@ -141,10 +117,7 @@ export default function LoginPage({
           </div>
 
           <p className="text-white/30 text-xs mt-10">
-            New here?{' '}
-            <Link href={registerHref} className="text-white/60 hover:text-white underline">
-              Register here
-            </Link>
+            Access is restricted to authorised CJTF staff.
           </p>
         </div>
 
@@ -198,15 +171,6 @@ export default function LoginPage({
             <p className="text-center text-xs text-gray-400 mt-3">
               <Link href="/auth/forgot-password" className="hover:underline">Forgot password?</Link>
             </p>
-
-            {(role === 'applicant' || role === 'office') && (
-              <p className="text-center text-sm text-gray-500 mt-4">
-                {role === 'office' ? 'New to office registration?' : 'New applicant?'}{' '}
-                <Link href={registerHref} className="font-medium hover:underline" style={{ color: roleConfig.accent }}>
-                  Register here
-                </Link>
-              </p>
-            )}
 
             <p className="text-center text-xs text-gray-400 mt-3">
               <Link href="/auth/login" className="hover:underline">← Back to role selection</Link>

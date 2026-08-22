@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { createCustomer, createVirtualAccount, findCustomer, type VirtualAccount } from '@/lib/hyparrow-pay'
 import { OFFICE_FEE_KOBO } from '@/lib/fees'
+import { canRegister } from '@/lib/roles'
 
 // Hyparrow expects a provider NAME here, not a numeric CBN/NIP code. Passing a
 // numeric code surfaces as "interswitch VA creation failed". Use WEMA (default).
@@ -25,7 +26,12 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     .eq('id', params.id)
     .maybeSingle()
 
-  if (!reg || reg.registrant_id !== user.id) {
+  const { data: callerProfile } = await service
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (!reg || (reg.registrant_id !== user.id && !canRegister(callerProfile?.role))) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 

@@ -75,9 +75,11 @@ function initial(reg: OfficeRegistration | null): FormState {
 export default function OfficeRegistrationForm({
   existing,
   localities,
+  afterSubmitPath,
 }: {
   existing: OfficeRegistration | null
   localities: Locality[]
+  afterSubmitPath?: string
 }) {
   const router = useRouter()
   const [step, setStep] = useState(0)
@@ -152,7 +154,7 @@ export default function OfficeRegistrationForm({
         return
       }
       toast.success('Registration submitted! Please pay the registration fee to continue.')
-      router.push('/portal/applicant/office/payment')
+      router.push(afterSubmitPath ?? '/portal/applicant/office/payment')
     } catch {
       toast.error('Network error. Please try again.')
       setSaving(false)

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { sendSms } from '@/lib/termii'
 import { officeChecksRelaxed, describeSkippedOfficeChecks } from '@/lib/pilot'
+import { canRegister } from '@/lib/roles'
 
 const STAFF_ROLES = ['ict', 'int', 'admin', 'executive']
 
@@ -43,7 +44,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     .eq('id', params.id)
     .single()
 
-  if (!reg || reg.registrant_id !== user.id) {
+  const { data: callerProfile } = await service
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (!reg || (reg.registrant_id !== user.id && !canRegister(callerProfile?.role))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
   if (reg.status !== 'DRAFT' && reg.status !== 'REJECTED') {
@@ -92,7 +98,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     .eq('id', params.id)
     .single()
 
-  if (!reg || reg.registrant_id !== user.id) {
+  const { data: callerProfile } = await service
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (!reg || (reg.registrant_id !== user.id && !canRegister(callerProfile?.role))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
   const isResubmit = reg.status === 'REJECTED'

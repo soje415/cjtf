@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { createCustomer, createVirtualAccount, findCustomer, type VirtualAccount } from '@/lib/hyparrow-pay'
 import { feeForMembershipType } from '@/lib/fees'
+import { canRegister } from '@/lib/roles'
 
 // Hyparrow expects a provider NAME here, not a numeric CBN/NIP code. Passing a
 // numeric code surfaces as "interswitch VA creation failed". Use WEMA (default).
@@ -10,21 +11,38 @@ const BANK_CODE = process.env.HYPARROW_VA_BANK_CODE || 'WEMA'
 /**
  * Ensure the applicant has a dedicated virtual account and return it, plus the
  * current paid status. Idempotent — safe to call on mount and to poll.
+ *
+ * ICT/Admin may pass `applicationId` to operate on behalf of an applicant who
+ * has no login of their own.
  */
-export async function POST() {
+export async function POST(req: Request) {
   const supabase = createClient()
   const { data: { session: _session } } = await supabase.auth.getSession()
   const user = _session?.user
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const body = await req.json().catch(() => ({}))
+  const applicationId = typeof body?.applicationId === 'string' ? body.applicationId : null
+
   const service = createServiceClient()
-  const { data: app } = await service
+  const { data: callerProfile } = await service
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+  const canAct = canRegister(callerProfile?.role)
+
+  let query = service
     .from('applications')
     .select(
       'id, status, applicant_id, membership_type, first_name, last_name, middle_name, email, phone_number, date_of_birth, hyparrow_customer_id, va_account_number, va_account_name, va_bank_name'
     )
-    .eq('applicant_id', user.id)
-    .maybeSingle()
+  if (applicationId && canAct) {
+    query = query.eq('id', applicationId)
+  } else {
+    query = query.eq('applicant_id', user.id)
+  }
+  const { data: app } = await query.maybeSingle()
 
   if (!app) return NextResponse.json({ error: 'No application found' }, { status: 404 })
 

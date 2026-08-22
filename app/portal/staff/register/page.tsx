@@ -9,7 +9,7 @@ import { canRegister } from '@/lib/roles'
 export default async function StaffRegisterPage({
   searchParams,
 }: {
-  searchParams: { mode?: string; created?: string }
+  searchParams: { mode?: string; type?: string; created?: string }
 }) {
   const supabase = createClient()
   const service = createServiceClient()
@@ -27,6 +27,7 @@ export default async function StaffRegisterPage({
 
   const mode = searchParams.mode === 'office' ? 'office' : 'applicant'
   const justCreated = searchParams.created === '1'
+  const initialMembershipType = searchParams.type === 'legacy' ? 'legacy' : 'new'
 
   return (
     <div className="max-w-2xl mx-auto space-y-4">
@@ -44,7 +45,7 @@ export default async function StaffRegisterPage({
         </div>
       )}
 
-      <StaffRegisterForm mode={mode} />
+      <StaffRegisterForm mode={mode} initialMembershipType={initialMembershipType} />
 
       <p className="text-center text-sm text-gray-400">
         <Link href={`/portal/${profile?.role}/dashboard`} className="hover:underline">

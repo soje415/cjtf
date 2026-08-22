@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 
 interface Props {
   applicationId: string
+  redirectPath?: string
 }
 
 interface UssdIssuer {
@@ -19,7 +20,7 @@ interface UssdIssuer {
  * Alternate Hyparrow payment channels for the registration fee: OPay (redirect)
  * and USSD (dial code), shown alongside the bank-transfer virtual account.
  */
-export default function OpayUssdPayment({ applicationId }: Props) {
+export default function OpayUssdPayment({ applicationId, redirectPath }: Props) {
   const router = useRouter()
   const [opayLoading, setOpayLoading] = useState(false)
   const [issuers, setIssuers] = useState<UssdIssuer[]>([])
@@ -34,8 +35,8 @@ export default function OpayUssdPayment({ applicationId }: Props) {
   useEffect(() => stopPolling, [])
 
   function goDashboard() {
-    toast.success('Payment received! Your application has been forwarded for ICT verification.')
-    setTimeout(() => router.push('/portal/applicant/dashboard'), 1200)
+    toast.success('Payment received! The record has been forwarded for review.')
+    setTimeout(() => router.push(redirectPath ?? '/portal/applicant/dashboard'), 1200)
   }
 
   function pollPaid(everyMs: number) {
@@ -44,7 +45,11 @@ export default function OpayUssdPayment({ applicationId }: Props) {
     // for "has the application left PENDING_PAYMENT", regardless of channel.
     pollRef.current = setInterval(async () => {
       try {
-        const res = await fetch('/api/hyparrow/account', { method: 'POST' })
+        const res = await fetch('/api/hyparrow/account', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ applicationId }),
+        })
         const d = await res.json()
         if (d.paid) { stopPolling(); goDashboard() }
       } catch { /* keep polling */ }

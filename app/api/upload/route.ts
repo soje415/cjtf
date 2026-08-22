@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
+import { canRegister } from '@/lib/roles'
 
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
 const ALLOWED_EXT = new Set(['jpg', 'jpeg', 'png', 'webp', 'pdf'])
@@ -33,23 +34,35 @@ export async function POST(req: NextRequest) {
 
   // The upload route serves both application documents and office-registration
   // photos, so `applicationId` is the owning record id in EITHER table. A
-  // signed URL must only be minted for the caller's own record — otherwise any
-  // user could plant files in another applicant's (now-public) folder.
+  // signed URL must only be minted for the caller's own record — or by ICT/Admin
+  // acting on behalf of the applicant/registrant — otherwise any user could plant
+  // files in another applicant's (now-public) folder.
+  const { data: callerProfile } = await service
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+  const isRegistrar = canRegister(callerProfile?.role)
+
   const { data: app } = await service
     .from('applications')
     .select('applicant_id')
     .eq('id', applicationId)
     .maybeSingle()
   let owned = app?.applicant_id === user.id
-  if (!owned) {
+  let exists = !!app
+  if (!app) {
     const { data: reg } = await service
       .from('office_registrations')
       .select('registrant_id')
       .eq('id', applicationId)
       .maybeSingle()
     owned = reg?.registrant_id === user.id
+    exists = !!reg
   }
-  if (!owned) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!owned && !(isRegistrar && exists)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   const path = `${applicationId}/${Date.now()}.${ext}`
 

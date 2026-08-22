@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { randomUUID } from 'crypto'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { canRegister } from '@/lib/roles'
 
@@ -25,16 +26,17 @@ export async function POST(req: Request) {
   const fullName = String(body.fullName ?? '').trim()
   const email = String(body.email ?? '').trim().toLowerCase()
   const phone = String(body.phone ?? '').trim()
-  const password = String(body.password ?? '')
   const mode = body.mode === 'office' ? 'office' : 'applicant'
   const membershipType = body.membershipType === 'legacy' ? 'legacy' : 'new'
 
-  if (!fullName || !email || !phone || !password) {
-    return NextResponse.json({ error: 'Full name, email, phone and a password are required.' }, { status: 400 })
+  if (!fullName || !email || !phone) {
+    return NextResponse.json({ error: 'Full name, email and phone are required.' }, { status: 400 })
   }
-  if (password.length < 8) {
-    return NextResponse.json({ error: 'Password must be at least 8 characters.' }, { status: 400 })
-  }
+
+  // The applicant/registrant never logs in: this account is an internal identity
+  // anchor only. Generate a random password that is never shared or stored in
+  // plaintext anywhere a user can reach it.
+  const password = randomUUID()
 
   // Create the applicant's own account. `email_confirm: true` because the
   // project runs with email confirmation off — the account must be usable

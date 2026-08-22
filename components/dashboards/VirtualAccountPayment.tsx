@@ -11,6 +11,7 @@ import { paymentBypassEnabled, formatNaira } from '@/lib/fees'
 interface Props {
   applicationId: string
   name: string
+  redirectPath?: string
 }
 
 interface AccountState {
@@ -20,7 +21,7 @@ interface AccountState {
   amount: number // kobo
 }
 
-export default function VirtualAccountPayment({ name }: Props) {
+export default function VirtualAccountPayment({ applicationId, name, redirectPath }: Props) {
   const router = useRouter()
   const [account, setAccount] = useState<AccountState | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -30,7 +31,11 @@ export default function VirtualAccountPayment({ name }: Props) {
 
   // Fetch (or create) the virtual account, and report whether it's been paid.
   const fetchAccount = useCallback(async (): Promise<boolean> => {
-    const res = await fetch('/api/hyparrow/account', { method: 'POST' })
+    const res = await fetch('/api/hyparrow/account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ applicationId }),
+    })
     const data = await res.json()
     if (!res.ok) {
       setError(data.error || 'Could not generate a payment account.')
@@ -76,8 +81,8 @@ export default function VirtualAccountPayment({ name }: Props) {
 
   function onPaid() {
     setPaid(true)
-    toast.success('Payment received! Your application has been forwarded for ICT verification.')
-    setTimeout(() => router.push('/portal/applicant/dashboard'), 1500)
+    toast.success('Payment received! The record has been forwarded for review.')
+    setTimeout(() => router.push(redirectPath ?? '/portal/applicant/dashboard'), 1500)
   }
 
   async function copy() {
@@ -89,7 +94,11 @@ export default function VirtualAccountPayment({ name }: Props) {
   async function simulate() {
     setSimulating(true)
     try {
-      const res = await fetch('/api/hyparrow/simulate', { method: 'POST' })
+      const res = await fetch('/api/hyparrow/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applicationId }),
+      })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Simulation failed')
       onPaid()

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { creditVirtualAccountPayment } from '@/lib/notifications'
 import { feeForMembershipType, paymentBypassEnabled } from '@/lib/fees'
+import { canRegister } from '@/lib/roles'
 
 
 /**
@@ -13,7 +14,7 @@ import { feeForMembershipType, paymentBypassEnabled } from '@/lib/fees'
  * Gated on NEXT_PUBLIC_ALLOW_PAYMENT_BYPASS so it can be used against the
  * deployed site while Hyparrow is being tested — see paymentBypassEnabled().
  */
-export async function POST() {
+export async function POST(req: Request) {
   if (!paymentBypassEnabled()) {
     return NextResponse.json({ error: 'Not available' }, { status: 404 })
   }
@@ -23,12 +24,26 @@ export async function POST() {
   const user = _session?.user
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const body = await req.json().catch(() => ({}))
+  const applicationId = typeof body?.applicationId === 'string' ? body.applicationId : null
+
   const service = createServiceClient()
-  const { data: app } = await service
+  const { data: callerProfile } = await service
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+  const canAct = canRegister(callerProfile?.role)
+
+  let query = service
     .from('applications')
     .select('id, applicant_id, status, membership_type')
-    .eq('applicant_id', user.id)
-    .maybeSingle()
+  if (applicationId && canAct) {
+    query = query.eq('id', applicationId)
+  } else {
+    query = query.eq('applicant_id', user.id)
+  }
+  const { data: app } = await query.maybeSingle()
 
   if (!app) return NextResponse.json({ error: 'No application found' }, { status: 404 })
   if (app.status !== 'PENDING_PAYMENT') return NextResponse.json({ paid: true })

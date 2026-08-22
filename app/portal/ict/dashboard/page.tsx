@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { LinkButton } from '@/components/ui/link-button'
-import { STATUS_LABELS, STATUS_COLORS, MEMBERSHIP_TYPE_LABELS, MEMBERSHIP_TYPE_COLORS, Application } from '@/lib/types'
+import { STATUS_LABELS, STATUS_COLORS, MEMBERSHIP_TYPE_LABELS, MEMBERSHIP_TYPE_COLORS, OFFICE_STATUS_LABELS, Application, OfficeRegistration } from '@/lib/types'
 
 export default async function IctDashboard() {
   const supabase = createClient()
@@ -38,12 +38,43 @@ export default async function IctDashboard() {
     .order('admin_approved_at', { ascending: true })
   const officePermits = officeRows ?? []
 
+  // In-progress drafts ICT started but hasn't submitted yet — quick resume.
+  const { data: draftRows } = await service
+    .from('applications')
+    .select('*')
+    .in('status', ['DRAFT', 'REJECTED'])
+    .order('updated_at', { ascending: false })
+    .limit(20)
+  const drafts = (draftRows ?? []) as Application[]
+
+  const { data: officeDraftRows } = await service
+    .from('office_registrations')
+    .select('*')
+    .in('status', ['DRAFT', 'REJECTED'])
+    .order('updated_at', { ascending: false })
+    .limit(20)
+  const officeDrafts = (officeDraftRows ?? []) as OfficeRegistration[]
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-800">ICT Dashboard</h1>
-        <p className="text-gray-500 text-sm">Review and verify applicant data</p>
+        <p className="text-gray-500 text-sm">Register applicants/offices and drive each record to completion</p>
       </div>
+
+      <Card>
+        <CardContent className="flex flex-wrap gap-3 pt-6">
+          <LinkButton href="/portal/staff/register?mode=applicant" className="bg-cjtf-green hover:bg-cjtf-green-dark">
+            + New Applicant
+          </LinkButton>
+          <LinkButton href="/portal/staff/register?mode=applicant&type=legacy" variant="outline" className="border-cjtf-green text-cjtf-green hover:bg-cjtf-green-light">
+            + New Legacy Member
+          </LinkButton>
+          <LinkButton href="/portal/staff/register?mode=office" variant="outline" className="border-cjtf-blue text-cjtf-blue hover:bg-cjtf-blue-light">
+            + New Office Registration
+          </LinkButton>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-3 gap-4">
         <Card className="text-center">
@@ -105,6 +136,39 @@ export default async function IctDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {(drafts.length > 0 || officeDrafts.length > 0) && (
+        <Card>
+          <CardHeader><CardTitle className="text-base">In-progress Drafts</CardTitle></CardHeader>
+          <CardContent>
+            {drafts.length === 0 && officeDrafts.length === 0 && (
+              <p className="py-4 text-center text-gray-500 text-sm">No drafts in progress.</p>
+            )}
+            {drafts.map((d) => (
+              <div key={d.id} className="flex items-center justify-between border-b last:border-0 py-2 text-sm">
+                <div>
+                  <p className="font-medium text-gray-800">{d.first_name || '—'} {d.last_name || ''}</p>
+                  <p className="text-xs text-gray-500">Applicant · {MEMBERSHIP_TYPE_LABELS[d.membership_type]} · {STATUS_LABELS[d.status]}</p>
+                </div>
+                <LinkButton href={`/portal/staff/application/${d.id}`} size="sm" variant="outline" className="text-xs border-cjtf-green text-cjtf-green hover:bg-cjtf-green-light">
+                  Continue
+                </LinkButton>
+              </div>
+            ))}
+            {officeDrafts.map((o) => (
+              <div key={o.id} className="flex items-center justify-between border-b last:border-0 py-2 text-sm">
+                <div>
+                  <p className="font-medium text-gray-800">{o.office_name || '—'}</p>
+                  <p className="text-xs text-gray-500">Office · {o.first_name} {o.last_name} · {OFFICE_STATUS_LABELS[o.status]}</p>
+                </div>
+                <LinkButton href={`/portal/staff/office/${o.id}`} size="sm" variant="outline" className="text-xs border-cjtf-blue text-cjtf-blue hover:bg-cjtf-blue-light">
+                  Continue
+                </LinkButton>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { getOpayPaymentStatus } from '@/lib/hyparrow-pay'
 import { notifyPaymentComplete } from '@/lib/notifications'
+import { canRegister } from '@/lib/roles'
 
 // POST /api/hyparrow/opay/status — confirm an OPay redirect payment settled and,
 // if so, advance the application. Idempotent (payment row + status guard).
@@ -21,7 +22,13 @@ export async function POST(req: Request) {
     .eq('paystack_reference', reference)
     .single()
 
-  if (!payment || payment.applicant_id !== user.id) {
+  const { data: callerProfile } = await service
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+  const canAct = canRegister(callerProfile?.role)
+  if (!payment || (payment.applicant_id !== user.id && !canAct)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
   if (payment.status === 'success') return NextResponse.json({ paid: true })

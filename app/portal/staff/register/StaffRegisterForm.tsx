@@ -8,13 +8,12 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 
-export default function StaffRegisterForm({ mode }: { mode: 'applicant' | 'office' }) {
+export default function StaffRegisterForm({ mode, initialMembershipType }: { mode: 'applicant' | 'office'; initialMembershipType?: 'new' | 'legacy' }) {
   const router = useRouter()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
-  const [password, setPassword] = useState('')
-  const [membershipType, setMembershipType] = useState<'new' | 'legacy'>('new')
+  const [membershipType, setMembershipType] = useState<'new' | 'legacy'>(initialMembershipType ?? 'new')
   const [saving, setSaving] = useState(false)
 
   async function submit(e: React.FormEvent) {
@@ -24,7 +23,7 @@ export default function StaffRegisterForm({ mode }: { mode: 'applicant' | 'offic
       const res = await fetch('/api/staff/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName, email, phone, password, mode, membershipType }),
+        body: JSON.stringify({ fullName, email, phone, mode, membershipType }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -49,7 +48,7 @@ export default function StaffRegisterForm({ mode }: { mode: 'applicant' | 'offic
           {isOffice ? 'Register a new office' : 'Register a new applicant'}
         </CardTitle>
         <p className="text-sm text-gray-500">
-          Create the {isOffice ? 'registrant' : 'applicant'}&apos;s account. You&apos;ll fill their full form next.
+          Create the {isOffice ? 'registrant' : 'applicant'}&apos;s record. You&apos;ll fill their full form next.
         </p>
       </CardHeader>
       <CardContent>
@@ -65,11 +64,6 @@ export default function StaffRegisterForm({ mode }: { mode: 'applicant' | 'offic
           <div className="space-y-1">
             <Label>Phone number *</Label>
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0801 234 5678" required />
-          </div>
-          <div className="space-y-1">
-            <Label>Temporary password *</Label>
-            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min. 8 characters" required minLength={8} />
-            <p className="text-xs text-gray-400">Give this to the {isOffice ? 'registrant' : 'applicant'} so they can sign in later to pay and track.</p>
           </div>
           {!isOffice && (
             <div className="space-y-1">

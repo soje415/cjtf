@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient, createClient } from '@/lib/supabase/server'
 import { verifyIdentity, IdentityMethod } from '@/lib/hyparrow'
+import { canRegister } from '@/lib/roles'
 
 // POST /api/office/kyc/verify — office registrant verifies NIN or BVN.
 // On success the government name/DOB/gender are written to the registration
@@ -24,7 +25,12 @@ export async function POST(req: NextRequest) {
     .select('registrant_id, status')
     .eq('id', regId)
     .single()
-  if (!reg || reg.registrant_id !== user.id) {
+  const { data: callerProfile } = await service
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (!reg || (reg.registrant_id !== user.id && !canRegister(callerProfile?.role))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
   if (reg.status !== 'DRAFT' && reg.status !== 'REJECTED') {

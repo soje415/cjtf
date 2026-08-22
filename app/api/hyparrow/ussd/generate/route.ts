@@ -3,6 +3,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { generateUssdCode } from '@/lib/hyparrow-pay'
 import { feeForMembershipType } from '@/lib/fees'
 import { randomBytes } from 'crypto'
+import { canRegister } from '@/lib/roles'
 
 function ref(prefix: string) {
   return `${prefix}-${randomBytes(8).toString('hex').toUpperCase()}`
@@ -25,12 +26,17 @@ export async function POST(req: Request) {
   const service = createServiceClient()
   const { data: app } = await service
     .from('applications')
-    .select('id, status, membership_type')
+    .select('id, status, membership_type, applicant_id')
     .eq('id', applicationId)
-    .eq('applicant_id', user.id)
     .single()
 
-  if (!app || app.status !== 'PENDING_PAYMENT') {
+  const { data: callerProfile } = await service
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+  const canAct = canRegister(callerProfile?.role)
+  if (!app || (app.applicant_id !== user.id && !canAct) || app.status !== 'PENDING_PAYMENT') {
     return NextResponse.json({ error: 'Application not in payment state' }, { status: 400 })
   }
 
@@ -55,7 +61,7 @@ export async function POST(req: Request) {
 
   await service.from('payments').insert({
     application_id: applicationId,
-    applicant_id: user.id,
+    applicant_id: app.applicant_id,
     type: 'registration',
     amount,
     paystack_reference: reference,

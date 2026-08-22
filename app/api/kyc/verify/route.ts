@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient, createClient } from '@/lib/supabase/server'
 import { verifyIdentity, IdentityMethod } from '@/lib/hyparrow'
+import { canRegister } from '@/lib/roles'
 
 // POST /api/kyc/verify — applicant verifies their NIN or BVN.
 // On success the government-confirmed name/DOB/gender are written to the
@@ -19,13 +20,18 @@ export async function POST(req: NextRequest) {
 
   const service = createServiceClient()
 
-  // Ownership + must still be editable.
+  // Ownership + must still be editable. ICT/Admin may verify on the applicant's behalf.
   const { data: app } = await service
     .from('applications')
     .select('applicant_id, status, passport_photo_url')
     .eq('id', appId)
     .single()
-  if (!app || app.applicant_id !== user.id) {
+  const { data: callerProfile } = await service
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (!app || (app.applicant_id !== user.id && !canRegister(callerProfile?.role))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
   if (app.status !== 'DRAFT' && app.status !== 'REJECTED') {

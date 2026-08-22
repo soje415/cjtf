@@ -20,12 +20,14 @@ const OFFICE_LINKS = [
 const NAV_LINKS: Record<Exclude<Role, 'applicant'>, { label: string; href: string }[]> = {
   ict: [
     { label: 'Dashboard', href: '/portal/ict/dashboard' },
+    { label: 'New Registration', href: '/portal/staff/register' },
   ],
   int: [
     { label: 'Dashboard', href: '/portal/int/dashboard' },
   ],
   admin: [
     { label: 'Dashboard', href: '/portal/admin/dashboard' },
+    { label: 'New Registration', href: '/portal/staff/register' },
   ],
   executive: [
     { label: 'Oversight', href: '/portal/executive/dashboard' },
