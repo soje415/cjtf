@@ -18,7 +18,7 @@ const C = {
 const W = 242
 const H = 153
 
-const STRIPE_W = 10   // left colour stripe total width (pt)
+const STRIPE_W = 12   // left colour stripe total width (pt); divisible by 3 for equal thirds
 const MAIN_W   = W - STRIPE_W
 
 const styles = StyleSheet.create({
@@ -116,7 +116,7 @@ export interface IdCardData {
   fullName: string
   cjtfId: string
   residentialAddress: string
-  lga: string
+  state: string
   gender: string
   nin?: string
   designation?: string
@@ -128,7 +128,7 @@ export interface IdCardData {
 }
 
 export default function IdCardTemplate({
-  fullName, cjtfId, residentialAddress, lga, gender, nin,
+  fullName, cjtfId, residentialAddress, state, gender, nin,
   designation = 'VOLUNTEER MEMBER',
   photoUrl, qrDataUrl, issueDate, expiryDate, logoBase64,
 }: IdCardData) {
@@ -184,8 +184,8 @@ export default function IdCardTemplate({
                   <Text style={styles.fValue}>{gender ? gender.charAt(0).toUpperCase() + gender.slice(1) : '—'}</Text>
                 </View>
                 <View style={styles.field}>
-                  <Text style={styles.fLabel}>LGA</Text>
-                  <Text style={styles.fValue}>{lga}</Text>
+                  <Text style={styles.fLabel}>State</Text>
+                  <Text style={styles.fValue}>{state}</Text>
                 </View>
               </View>
 

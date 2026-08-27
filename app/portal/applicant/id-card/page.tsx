@@ -32,7 +32,7 @@ export default async function IdCardPage() {
       fullName={[app.first_name, app.middle_name, app.last_name].filter(Boolean).join(' ')}
       cjtfId={app.cjtf_id_number ?? ''}
       residentialAddress={app.residential_address ?? ''}
-      lga={app.lga_of_origin ?? ''}
+      state={app.state_of_origin ?? ''}
       gender={app.gender ?? ''}
       nin={app.nin ?? undefined}
       bloodGroup={app.blood_group ?? undefined}

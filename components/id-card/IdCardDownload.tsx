@@ -8,7 +8,7 @@ export interface IdCardPreviewProps {
   fullName: string
   cjtfId: string
   residentialAddress: string
-  lga: string
+  state: string
   gender: string
   nin?: string
   bloodGroup?: string
@@ -145,7 +145,7 @@ function PostingField({ label, value }: { label: string; value?: string | null }
 }
 
 export function IdCardPreview({
-  fullName, cjtfId, residentialAddress, lga, gender, bloodGroup,
+  fullName, cjtfId, residentialAddress, state, gender, bloodGroup,
   designation = 'VOLUNTEER MEMBER', photoUrl, verifyUrl, qrDataUrl: qrDataUrlProp,
   sectorCommand, subSector, unit,
 }: IdCardPreviewProps) {
@@ -164,7 +164,7 @@ export function IdCardPreview({
   const qrDataUrl = qrDataUrlProp || qrDataUrlState
 
   // 342 × 216 px  (≈ 2× CR80)
-  const STRIPE = 21   // left stripe total width
+  const STRIPE = 30   // left stripe total width (equal thirds: 30 / 3 = 10px each)
   const CARD_W = 342
   const CARD_H = 216
   const MAIN_W = CARD_W - STRIPE
@@ -278,14 +278,14 @@ export function IdCardPreview({
               <span style={{ fontSize: 7.5, color: C.green, fontWeight: 800, letterSpacing: 0.3, lineHeight: 1.2 }}>{designation}</span>
             </div>
 
-            <PostingField label="Sector Command" value={sectorCommand} />
+            <PostingField label="Command" value={sectorCommand} />
             <PostingField label="Sub Sector" value={subSector} />
             <PostingField label="Unit" value={unit} />
 
             {/* Small fields grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px 8px', marginTop: 2 }}>
               <SmallField label="Gender" value={gender ? gender.charAt(0).toUpperCase() + gender.slice(1) : '—'} />
-              <SmallField label="LGA" value={lga} />
+              <SmallField label="State" value={state} />
               <div style={{ gridColumn: '1 / -1' }}>
                 <SmallField label="Address" value={residentialAddress || '—'} />
               </div>
@@ -402,7 +402,7 @@ export function IdCardBackPreview({
   holderSignatureUrl, officerSignatureUrl,
 }: IdCardBackPreviewProps) {
   // Same footprint as the front so the two pages line up when printed.
-  const STRIPE = 21
+  const STRIPE = 30
   const CARD_W = 342
   const CARD_H = 216
   const MAIN_W = CARD_W - STRIPE

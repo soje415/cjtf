@@ -18,7 +18,7 @@ export default function CardPreviewPage() {
     fullName: 'MUSA IBRAHIM AHMADU',
     cjtfId: 'CJTF/2026/00001',
     residentialAddress: '14 Ajilore Street, Kubwa, Abuja',
-    lga: 'Maiduguri',
+    state: 'Borno',
     gender: 'male',
     bloodGroup: 'O+',
     designation: 'CHIEF INSPECTOR',

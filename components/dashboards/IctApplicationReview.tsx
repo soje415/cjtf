@@ -222,7 +222,7 @@ export default function IctApplicationReview({ application, payments, notes }: P
                 fullName={fullName}
                 cjtfId={generated.cjtfId}
                 residentialAddress={application.residential_address ?? ''}
-                lga={application.lga_of_origin}
+                state={application.state_of_origin}
                 gender={application.gender ?? ''}
                 bloodGroup={application.blood_group ?? undefined}
                 designation={rankForCard(application.cjtf_rank)}
