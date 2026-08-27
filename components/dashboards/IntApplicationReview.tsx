@@ -82,8 +82,6 @@ export default function IntApplicationReview({ application, notes }: Props) {
               ['Date of Birth', application.date_of_birth ?? '—'],
               ['Gender', application.gender ?? '—'],
               ['NIN', application.nin || '—'],
-              ['State', application.state_of_origin],
-              ['LGA', application.lga_of_origin],
               ['Phone', application.phone_number],
               ['Address', application.residential_address],
             ].map(([label, value]) => (

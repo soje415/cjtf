@@ -17,9 +17,8 @@ export default function CardPreviewPage() {
   const sample = {
     fullName: 'MUSA IBRAHIM AHMADU',
     cjtfId: 'CJTF/2026/00001',
-    stateOfOrigin: 'Borno',
+    residentialAddress: '14 Ajilore Street, Kubwa, Abuja',
     lga: 'Maiduguri',
-    dateOfBirth: '14/03/1992',
     gender: 'male',
     bloodGroup: 'O+',
     designation: 'CHIEF INSPECTOR',

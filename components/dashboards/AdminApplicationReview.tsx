@@ -117,7 +117,7 @@ export default function AdminApplicationReview({ application, payments, notes }:
               ['Date of Birth', application.date_of_birth ?? '—'],
               ['Gender', application.gender ?? '—'],
               ['NIN', application.nin || '—'],
-              ['State / LGA', `${application.state_of_origin} / ${application.lga_of_origin}`],
+              ['Address', application.residential_address],
               ['Phone', application.phone_number],
               ['Email', application.email],
             ].map(([label, value]) => (

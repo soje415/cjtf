@@ -7,9 +7,8 @@ import { Button } from '@/components/ui/button'
 export interface IdCardPreviewProps {
   fullName: string
   cjtfId: string
-  stateOfOrigin: string
+  residentialAddress: string
   lga: string
-  dateOfBirth: string
   gender: string
   nin?: string
   bloodGroup?: string
@@ -41,6 +40,10 @@ const C = {
   grey:   '#5a5a5a',
   red:    '#CC0000',
   yellow: '#FFD700',
+  // CJTF flag colours — the card's left stripe, sampled from the official flag artwork.
+  flagBlue:   '#0FB3E3',
+  flagYellow: '#FDF110',
+  flagRed:    '#EE3034',
 }
 
 /**
@@ -142,7 +145,7 @@ function PostingField({ label, value }: { label: string; value?: string | null }
 }
 
 export function IdCardPreview({
-  fullName, cjtfId, stateOfOrigin, lga, dateOfBirth, gender, bloodGroup,
+  fullName, cjtfId, residentialAddress, lga, gender, bloodGroup,
   designation = 'VOLUNTEER MEMBER', photoUrl, verifyUrl, qrDataUrl: qrDataUrlProp,
   sectorCommand, subSector, unit,
 }: IdCardPreviewProps) {
@@ -177,9 +180,9 @@ export function IdCardPreview({
 
       {/* ── LEFT COLOUR STRIPE ── */}
       <div style={{ width: STRIPE, height: CARD_H, display: 'flex', flexDirection: 'row', flexShrink: 0 }}>
-        <div style={{ flex: 1, background: C.green }} />
-        <div style={{ flex: 1, background: C.yellow }} />
-        <div style={{ flex: 1, background: C.red }} />
+        <div style={{ flex: 1, background: C.flagBlue }} />
+        <div style={{ flex: 1, background: C.flagYellow }} />
+        <div style={{ flex: 1, background: C.flagRed }} />
       </div>
 
       {/* ── MAIN CARD CONTENT ── */}
@@ -281,10 +284,11 @@ export function IdCardPreview({
 
             {/* Small fields grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px 8px', marginTop: 2 }}>
-              <SmallField label="Date of Birth" value={dateOfBirth || '—'} />
               <SmallField label="Gender" value={gender ? gender.charAt(0).toUpperCase() + gender.slice(1) : '—'} />
-              <SmallField label="State of Origin" value={stateOfOrigin} />
               <SmallField label="LGA" value={lga} />
+              <div style={{ gridColumn: '1 / -1' }}>
+                <SmallField label="Address" value={residentialAddress || '—'} />
+              </div>
             </div>
           </div>
 
@@ -413,9 +417,9 @@ export function IdCardBackPreview({
     }}>
       {/* ── LEFT COLOUR STRIPE ── */}
       <div style={{ width: STRIPE, height: CARD_H, display: 'flex', flexDirection: 'row', flexShrink: 0 }}>
-        <div style={{ flex: 1, background: C.green }} />
-        <div style={{ flex: 1, background: C.yellow }} />
-        <div style={{ flex: 1, background: C.red }} />
+        <div style={{ flex: 1, background: C.flagBlue }} />
+        <div style={{ flex: 1, background: C.flagYellow }} />
+        <div style={{ flex: 1, background: C.flagRed }} />
       </div>
 
       {/* ── MAIN CARD CONTENT ── */}

@@ -8,6 +8,10 @@ const C = {
   grey:   '#5a5a5a',
   red:    '#CC0000',
   yellow: '#FFD700',
+  // CJTF flag colours — the card's left stripe, sampled from the official flag artwork.
+  flagBlue:   '#0FB3E3',
+  flagYellow: '#FDF110',
+  flagRed:    '#EE3034',
 }
 
 // CR80: 85.6 mm × 54 mm ≈ 242 pt × 153 pt
@@ -22,9 +26,9 @@ const styles = StyleSheet.create({
 
   // ── Left colour stripe ──
   stripe:       { width: STRIPE_W, height: H, flexDirection: 'row' },
-  stripeGreen:  { flex: 1, backgroundColor: C.green },
-  stripeYellow: { flex: 1, backgroundColor: C.yellow },
-  stripeRed:    { flex: 1, backgroundColor: C.red },
+  stripeBlue:   { flex: 1, backgroundColor: C.flagBlue },
+  stripeYellow: { flex: 1, backgroundColor: C.flagYellow },
+  stripeRed:    { flex: 1, backgroundColor: C.flagRed },
 
   // ── Main column ──
   main: { width: MAIN_W, height: H, flexDirection: 'column' },
@@ -111,9 +115,8 @@ const styles = StyleSheet.create({
 export interface IdCardData {
   fullName: string
   cjtfId: string
-  stateOfOrigin: string
+  residentialAddress: string
   lga: string
-  dateOfBirth: string
   gender: string
   nin?: string
   designation?: string
@@ -125,7 +128,7 @@ export interface IdCardData {
 }
 
 export default function IdCardTemplate({
-  fullName, cjtfId, stateOfOrigin, lga, dateOfBirth, gender, nin,
+  fullName, cjtfId, residentialAddress, lga, gender, nin,
   designation = 'VOLUNTEER MEMBER',
   photoUrl, qrDataUrl, issueDate, expiryDate, logoBase64,
 }: IdCardData) {
@@ -135,7 +138,7 @@ export default function IdCardTemplate({
 
         {/* ── LEFT COLOUR STRIPE ── */}
         <View style={styles.stripe}>
-          <View style={styles.stripeGreen} />
+          <View style={styles.stripeBlue} />
           <View style={styles.stripeYellow} />
           <View style={styles.stripeRed} />
         </View>
@@ -177,23 +180,19 @@ export default function IdCardTemplate({
 
               <View style={styles.row}>
                 <View style={styles.field}>
-                  <Text style={styles.fLabel}>Date of Birth</Text>
-                  <Text style={styles.fValue}>{dateOfBirth || '—'}</Text>
-                </View>
-                <View style={styles.field}>
                   <Text style={styles.fLabel}>Gender</Text>
                   <Text style={styles.fValue}>{gender ? gender.charAt(0).toUpperCase() + gender.slice(1) : '—'}</Text>
+                </View>
+                <View style={styles.field}>
+                  <Text style={styles.fLabel}>LGA</Text>
+                  <Text style={styles.fValue}>{lga}</Text>
                 </View>
               </View>
 
               <View style={styles.row}>
                 <View style={styles.field}>
-                  <Text style={styles.fLabel}>State of Origin</Text>
-                  <Text style={styles.fValue}>{stateOfOrigin}</Text>
-                </View>
-                <View style={styles.field}>
-                  <Text style={styles.fLabel}>LGA</Text>
-                  <Text style={styles.fValue}>{lga}</Text>
+                  <Text style={styles.fLabel}>Address</Text>
+                  <Text style={styles.fValue}>{residentialAddress}</Text>
                 </View>
               </View>
 

@@ -78,6 +78,7 @@ export default function IctApplicationReview({ application, payments, notes }: P
     if (res.ok) {
       toast.success('Application forwarded to Intelligence department')
       router.push('/portal/ict/dashboard')
+      router.refresh()
     } else {
       const d = await res.json()
       toast.error(d.error || 'Failed to forward')
@@ -195,9 +196,6 @@ export default function IctApplicationReview({ application, payments, notes }: P
       .filter(Boolean).join(' ')
     const verifyUrl = memberVerifyUrl(application.id)
     const issueDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-    const dateOfBirth = application.date_of_birth
-      ? new Date(application.date_of_birth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-      : ''
 
     return (
       <div className="max-w-3xl mx-auto space-y-6">
@@ -223,9 +221,8 @@ export default function IctApplicationReview({ application, payments, notes }: P
               <IdCardPreview
                 fullName={fullName}
                 cjtfId={generated.cjtfId}
-                stateOfOrigin={application.state_of_origin}
+                residentialAddress={application.residential_address ?? ''}
                 lga={application.lga_of_origin}
-                dateOfBirth={dateOfBirth}
                 gender={application.gender ?? ''}
                 bloodGroup={application.blood_group ?? undefined}
                 designation={rankForCard(application.cjtf_rank)}

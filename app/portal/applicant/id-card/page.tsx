@@ -25,19 +25,14 @@ export default async function IdCardPage() {
     ? new Date(completedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
     : new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 
-  const dateOfBirth = app.date_of_birth
-    ? new Date(app.date_of_birth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-    : ''
-
   const verifyUrl = memberVerifyUrl(app.id)
 
   return (
     <IdCardDownload
       fullName={[app.first_name, app.middle_name, app.last_name].filter(Boolean).join(' ')}
       cjtfId={app.cjtf_id_number ?? ''}
-      stateOfOrigin={app.state_of_origin ?? ''}
+      residentialAddress={app.residential_address ?? ''}
       lga={app.lga_of_origin ?? ''}
-      dateOfBirth={dateOfBirth}
       gender={app.gender ?? ''}
       nin={app.nin ?? undefined}
       bloodGroup={app.blood_group ?? undefined}
