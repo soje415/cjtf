@@ -32,6 +32,8 @@ export type NoteAction =
   | 'identity_waived'
   | 'rank_recommended'
   | 'rank_assigned'
+  | 'int_corrected'
+  | 'admin_corrected'
 
 export interface Profile {
   id: string

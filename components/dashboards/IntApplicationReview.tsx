@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
 import { CJTF_RANKS, DEFAULT_RECOMMENDED_RANK, type CjtfRank } from '@/lib/ranks'
 import { toast } from 'sonner'
+import ApplicantDetailsEditor from './ApplicantDetailsEditor'
 
 interface Props {
   application: Application
@@ -76,21 +77,24 @@ export default function IntApplicationReview({ application, notes }: Props) {
         )}
         <Card className="md:col-span-2">
           <CardHeader className="pb-2"><CardTitle className="text-sm">Applicant Details</CardTitle></CardHeader>
-          <CardContent className="grid grid-cols-2 gap-2 text-sm">
-            {[
-              ['Full Name', `${application.first_name} ${application.middle_name ?? ''} ${application.last_name}`],
-              ['Date of Birth', application.date_of_birth ?? '—'],
-              ['Gender', application.gender ?? '—'],
-              ['NIN', application.nin || '—'],
-              ['State of Origin', application.state_of_origin],
-              ['Phone', application.phone_number],
-              ['Address', application.residential_address],
-            ].map(([label, value]) => (
-              <div key={label}>
-                <p className="text-gray-500 text-xs">{label}</p>
-                <p className="font-medium">{value}</p>
-              </div>
-            ))}
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              {[
+                ['Full Name', `${application.first_name} ${application.middle_name ?? ''} ${application.last_name}`],
+                ['Date of Birth', application.date_of_birth ?? '—'],
+                ['Gender', application.gender ?? '—'],
+                ['NIN', application.nin || '—'],
+                ['State of Origin', application.state_of_origin],
+                ['Phone', application.phone_number],
+                ['Address', application.residential_address],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <p className="text-gray-500 text-xs">{label}</p>
+                  <p className="font-medium">{value}</p>
+                </div>
+              ))}
+            </div>
+            <ApplicantDetailsEditor application={application} />
           </CardContent>
         </Card>
       </div>
