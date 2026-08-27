@@ -15,6 +15,7 @@ import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
 import { CJTF_RANKS, DEFAULT_RECOMMENDED_RANK, type CjtfRank } from '@/lib/ranks'
 import { toast } from 'sonner'
 import ApplicantDetailsEditor from './ApplicantDetailsEditor'
+import DocumentWaivers from './DocumentWaivers'
 
 interface Props {
   application: Application
@@ -98,6 +99,8 @@ export default function IntApplicationReview({ application, notes }: Props) {
           </CardContent>
         </Card>
       </div>
+
+      <DocumentWaivers application={application} />
 
       {application.membership_type === 'legacy' && (
         <Card>

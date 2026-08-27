@@ -31,8 +31,11 @@ const BASE_DOCS: { field: DocField; label: string; accept: string; required?: bo
   { field: 'passport_photo_url', label: 'Passport Photograph', accept: 'image/*', required: true },
   { field: 'id_document_url', label: 'National ID / Voter Card / NIN Slip', accept: 'image/*,.pdf' },
   { field: 'birth_cert_url', label: 'Birth Certificate', accept: 'image/*,.pdf' },
-  { field: 'age_declaration_url', label: 'Declaration of Age', accept: 'image/*,.pdf', required: true },
-  { field: 'guarantor_form_url', label: 'Signed Guarantor Form', accept: 'image/*,.pdf', required: true },
+  // required is finalized below per membershipType — legacy members (already
+  // serving, re-registering) aren't required to produce these two; new
+  // applicants are, unless INT/Admin later waive it.
+  { field: 'age_declaration_url', label: 'Declaration of Age', accept: 'image/*,.pdf' },
+  { field: 'guarantor_form_url', label: 'Signed Guarantor Form', accept: 'image/*,.pdf' },
 ]
 
 const LEGACY_DOC: { field: DocField; label: string; accept: string; required?: boolean } = {
@@ -44,7 +47,10 @@ const LEGACY_DOC: { field: DocField; label: string; accept: string; required?: b
 
 export default function Step4Documents({ form, update, saveProgress, saving, membershipType, appId, onNext, onBack }: Props) {
   const [uploading, setUploading] = useState<DocField | null>(null)
-  const DOCS = membershipType === 'legacy' ? [...BASE_DOCS, LEGACY_DOC] : BASE_DOCS
+  const EASED_FOR_LEGACY: DocField[] = ['age_declaration_url', 'guarantor_form_url']
+  const DOCS = (membershipType === 'legacy' ? [...BASE_DOCS, LEGACY_DOC] : BASE_DOCS).map((d) =>
+    EASED_FOR_LEGACY.includes(d.field) ? { ...d, required: membershipType !== 'legacy' } : d
+  )
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>, field: DocField) {
     const file = e.target.files?.[0]

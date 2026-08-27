@@ -34,6 +34,7 @@ export type NoteAction =
   | 'rank_assigned'
   | 'int_corrected'
   | 'admin_corrected'
+  | 'document_waived'
 
 export interface Profile {
   id: string
@@ -93,6 +94,14 @@ export interface Application {
   identity_verify_waived: boolean
   identity_verify_waived_by: string | null
   identity_verify_waived_reason: string | null
+  // document waivers — legacy members aren't required to provide these two;
+  // new applicants are, unless INT/Admin explicitly waive it here.
+  guarantor_form_waived: boolean
+  guarantor_form_waived_by: string | null
+  guarantor_form_waived_reason: string | null
+  age_declaration_waived: boolean
+  age_declaration_waived_by: string | null
+  age_declaration_waived_reason: string | null
   passport_photo_url: string | null
   id_document_url: string | null
   birth_cert_url: string | null

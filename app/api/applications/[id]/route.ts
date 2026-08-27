@@ -104,7 +104,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const service = createServiceClient()
   const { data: app } = await service
     .from('applications')
-    .select('applicant_id, status, membership_type, first_name, last_name, phone_number, passport_photo_url, rejected_by_role, identity_verified, identity_verify_waived, self_reported_rank, vouching_officer_name, vouching_doc_url, sector_command, sub_sector, unit')
+    .select('applicant_id, status, membership_type, first_name, last_name, phone_number, passport_photo_url, rejected_by_role, identity_verified, identity_verify_waived, self_reported_rank, vouching_officer_name, vouching_doc_url, sector_command, sub_sector, unit, guarantor_form_url, guarantor_form_waived, age_declaration_url, age_declaration_waived')
     .eq('id', params.id)
     .single()
 
@@ -137,6 +137,25 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       { error: 'Please verify your identity with your NIN or BVN before submitting your application.' },
       { status: 403 }
     )
+  }
+
+  // Guarantor form and declaration of age are only required for new
+  // applicants — legacy members (already serving, re-registering) are exempt
+  // outright. A new applicant missing one can still submit once INT/Admin
+  // waive it (see /api/applications/[id]/waive-document).
+  if (app.membership_type !== 'legacy') {
+    if (!app.guarantor_form_url && !app.guarantor_form_waived) {
+      return NextResponse.json(
+        { error: 'Please upload your signed guarantor form before submitting your application.' },
+        { status: 400 }
+      )
+    }
+    if (!app.age_declaration_url && !app.age_declaration_waived) {
+      return NextResponse.json(
+        { error: 'Please upload your declaration of age before submitting your application.' },
+        { status: 400 }
+      )
+    }
   }
 
   // Phone verification (SMS OTP via Termii) is intentionally a SOFT gate for now
