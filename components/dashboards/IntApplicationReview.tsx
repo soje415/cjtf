@@ -88,6 +88,8 @@ export default function IntApplicationReview({ application, notes }: Props) {
                 ['State of Origin', application.state_of_origin],
                 ['Phone', application.phone_number],
                 ['Address', application.residential_address],
+                ['Sector Command', application.sector_command || '—'],
+                ['Sub Sector', application.sub_sector || '—'],
               ].map(([label, value]) => (
                 <div key={label}>
                   <p className="text-gray-500 text-xs">{label}</p>

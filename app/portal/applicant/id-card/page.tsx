@@ -37,6 +37,9 @@ export default async function IdCardPage() {
       nin={app.nin ?? undefined}
       bloodGroup={app.blood_group ?? undefined}
       designation={rankForCard(app.cjtf_rank)}
+      sectorCommand={app.sector_command}
+      subSector={app.sub_sector}
+      unit={app.unit}
       issueDate={issueDate}
       photoUrl={app.passport_photo_url ?? ''}
       pdfUrl={app.id_card_pdf_url ?? ''}

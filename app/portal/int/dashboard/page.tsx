@@ -60,7 +60,9 @@ export default async function IntDashboard() {
                 <thead>
                   <tr className="border-b text-gray-500 text-xs uppercase">
                     <th className="text-left pb-2 pr-4">Name</th>
-                    <th className="text-left pb-2 pr-4">State / LGA</th>
+                    <th className="text-left pb-2 pr-4">Address</th>
+                    <th className="text-left pb-2 pr-4">Sector Command</th>
+                    <th className="text-left pb-2 pr-4">Sub Sector</th>
                     <th className="text-left pb-2 pr-4">Status</th>
                     <th className="text-left pb-2 pr-4">ICT Verified</th>
                     <th className="text-left pb-2">Action</th>
@@ -70,7 +72,9 @@ export default async function IntDashboard() {
                   {list.map((app) => (
                     <tr key={app.id} className="border-b last:border-0 hover:bg-gray-50">
                       <td className="py-2 pr-4 font-medium">{app.first_name} {app.last_name}</td>
-                      <td className="py-2 pr-4 text-gray-600">{app.state_of_origin} / {app.lga_of_origin}</td>
+                      <td className="py-2 pr-4 text-gray-600">{app.residential_address || '—'}</td>
+                      <td className="py-2 pr-4 text-gray-600">{app.sector_command || '—'}</td>
+                      <td className="py-2 pr-4 text-gray-600">{app.sub_sector || '—'}</td>
                       <td className="py-2 pr-4">
                         <Badge className={STATUS_COLORS[app.status]}>{STATUS_LABELS[app.status]}</Badge>
                       </td>

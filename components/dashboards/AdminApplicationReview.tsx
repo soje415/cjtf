@@ -122,6 +122,8 @@ export default function AdminApplicationReview({ application, payments, notes }:
                 ['NIN', application.nin || '—'],
                 ['State of Origin', application.state_of_origin],
                 ['Address', application.residential_address],
+                ['Sector Command', application.sector_command || '—'],
+                ['Sub Sector', application.sub_sector || '—'],
                 ['Phone', application.phone_number],
                 ['Email', application.email],
               ].map(([label, value]) => (
