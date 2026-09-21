@@ -54,6 +54,14 @@ export async function updateSession(request: NextRequest) {
 
   // Must be logged in for portal
   if (!session) {
+    // API callers (fetch from the forms) can't act on a redirect to the login
+    // page — they follow it, get HTML with a 200, and blow up on res.json().
+    // Answer with a real 401 so an expired session surfaces as "Unauthorized"
+    // instead of a JSON parse error mid-form.
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const originalPath = pathname
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'

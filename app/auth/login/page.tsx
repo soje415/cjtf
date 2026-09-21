@@ -89,6 +89,20 @@ export default function LoginPage({
             <p className="text-xs text-white/50 mt-2">Select your role to continue</p>
           </div>
 
+          {/* Errors/messages can arrive without a role (e.g. an expired reset
+              link from /auth/callback) — show them here too, not just on the
+              role-specific form. */}
+          {searchParams.error && (
+            <div className="w-full max-w-xl bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3 mb-6">
+              {searchParams.error}
+            </div>
+          )}
+          {searchParams.message && (
+            <div className="w-full max-w-xl bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg p-3 mb-6">
+              {searchParams.message}
+            </div>
+          )}
+
           {/* Role cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-xl">
             {ROLES.map((r) => (
