@@ -22,7 +22,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             <Link href="/about" className="hover:text-cjtf-gold transition-colors">About</Link>
             <Link href="/auth/login" className="hover:text-cjtf-gold transition-colors">Login</Link>
             <Link
-              href="/auth/register"
+              href="/portal/applicant/application"
               className="bg-cjtf-gold text-cjtf-green px-4 py-1.5 rounded font-semibold hover:bg-cjtf-gold-dark transition-colors"
             >
               Apply Now

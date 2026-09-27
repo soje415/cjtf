@@ -40,7 +40,10 @@ export async function POST(req: NextRequest) {
 
   const result = await verifyIdentity(method as IdentityMethod, String(number))
   if (!result.ok || !result.identity) {
-    return NextResponse.json({ error: result.error ?? 'Verification failed.' }, { status: 422 })
+    return NextResponse.json(
+      { error: result.error ?? 'Verification failed.', serviceDown: result.serviceDown === true },
+      { status: result.serviceDown ? 503 : 422 }
+    )
   }
 
   const id = result.identity

@@ -226,7 +226,11 @@ function StepRegistrant({ form, update, saving, ensureRegId, saveProgress, onNex
         body: JSON.stringify({ regId: id, method, number }),
       })
       const json = await res.json()
-      if (!res.ok) { setVerifyError(json.error || 'Verification failed.'); setVerifying(false); return }
+      if (!res.ok) {
+        setVerifyError(json.error || 'Verification failed.')
+        setVerifying(false)
+        return
+      }
       const p = json.identity
       const fields: Partial<FormState> = {
         first_name: p.first_name, last_name: p.last_name, middle_name: p.middle_name || '',
@@ -242,12 +246,35 @@ function StepRegistrant({ form, update, saving, ensureRegId, saveProgress, onNex
     setVerifying(false)
   }
 
+  // Steady bypass: always available. The registrant continues without NIN/BVN
+  // verification now and completes it later.
+  async function handleDefer() {
+    setVerifyError('')
+    const id = await ensureRegId()
+    if (!id) { setVerifyError('Could not start your registration. Please try again.'); return }
+    setVerifying(true)
+    try {
+      const res = await fetch('/api/office/kyc/defer', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ regId: id }),
+      })
+      const json = await res.json()
+      if (!res.ok) { setVerifyError(json.error || 'Could not continue. Please try again.'); setVerifying(false); return }
+      update({ identity_verify_waived: true })
+      toast.success('Continuing without verification — you will complete it later.')
+    } catch {
+      setVerifyError('Could not reach the verification service. Please try again.')
+    }
+    setVerifying(false)
+  }
+
   // Self-serve identity waiver was removed for production: identity must be
   // verified (NIN/BVN). The registrant can no longer set identity_verify_waived
   // themselves (the field is no longer in the PATCH allowlist either).
   function handleRetryVerification() {
     update({ identity_verify_waived: false })
     saveProgress({ identity_verify_waived: false })
+    setVerifyError('')
   }
 
   const REQUIRED: [keyof FormState, string][] = [
@@ -255,13 +282,19 @@ function StepRegistrant({ form, update, saving, ensureRegId, saveProgress, onNex
     ['phone_number', 'Phone number'], ['residential_address', 'Residential address'],
   ]
   const missing = REQUIRED.filter(([k]) => !form[k]).map(([, l]) => l)
-  const valid = verified && missing.length === 0
+  const valid = (verified || waived) && missing.length === 0
 
   return (
     <Card>
       <CardContent className="p-6 space-y-4">
         <div className={`rounded-lg border p-4 ${verified ? 'border-green-300 bg-green-50' : waived ? 'border-amber-300 bg-amber-50' : 'border-cjtf-green/40 bg-cjtf-green/5'}`}>
-          {waived && !verified ? (
+          {verified ? (
+            <div>
+              <p className="font-semibold text-green-800">✓ Identity verified <span className="text-xs font-normal text-green-700">via {form.identity_verify_method?.toUpperCase()}</span></p>
+              <p className="text-sm text-gray-700 mt-1">{form.first_name} {form.middle_name} {form.last_name}</p>
+              <p className="text-xs text-gray-500 mt-1">Your name, date of birth and gender are confirmed and locked.</p>
+            </div>
+          ) : waived ? (
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="font-semibold text-amber-800">Verification skipped</p>
@@ -273,12 +306,6 @@ function StepRegistrant({ form, update, saving, ensureRegId, saveProgress, onNex
               <Button type="button" variant="outline" size="sm" onClick={handleRetryVerification}>
                 Try verification again
               </Button>
-            </div>
-          ) : verified ? (
-            <div>
-              <p className="font-semibold text-green-800">✓ Identity verified <span className="text-xs font-normal text-green-700">via {form.identity_verify_method?.toUpperCase()}</span></p>
-              <p className="text-sm text-gray-700 mt-1">{form.first_name} {form.middle_name} {form.last_name}</p>
-              <p className="text-xs text-gray-500 mt-1">Your name, date of birth and gender are confirmed and locked.</p>
             </div>
           ) : (
             <>
@@ -296,6 +323,15 @@ function StepRegistrant({ form, update, saving, ensureRegId, saveProgress, onNex
                 </Button>
               </div>
               {verifyError && <p className="text-sm text-red-600 mt-2">{verifyError}</p>}
+              <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 p-3">
+                <p className="text-xs text-blue-800">
+                  Can&apos;t verify right now? Continue without NIN/BVN verification and
+                  complete it later — it will be required before your permit is issued.
+                </p>
+                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={handleDefer} disabled={verifying}>
+                  {verifying ? 'Continuing…' : 'Continue without verification'}
+                </Button>
+              </div>
             </>
           )}
         </div>

@@ -142,7 +142,7 @@ export default function AboutPage() {
           Apply online, complete verification, and receive your official CJTF ID card.
         </p>
         <LinkButton
-          href="/auth/register"
+          href="/portal/applicant/application"
           className="bg-cjtf-yellow text-gray-900 font-bold hover:bg-cjtf-yellow-dark"
         >
           Start Your Application &rarr;

@@ -27,6 +27,13 @@ export interface VerifyResult {
   identity?: VerifiedIdentity
   /** Human-readable error for the applicant when ok === false. */
   error?: string
+  /**
+   * True when the provider itself is unreachable/down (network error, timeout,
+   * 5xx, an unfunded wallet, or a non-JSON response) rather than simply having
+   * no record for the number. Distinguishes "provider down" from a genuine miss
+   * so the error message shown to the applicant is accurate.
+   */
+  serviceDown?: boolean
 }
 
 // The provider wraps everything twice: { success, data: { success, response_code, message, data: {...} } }
@@ -58,6 +65,23 @@ const MONTHS: Record<string, string> = {
   jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
 }
 
+// Provider-side failure messages (an unfunded wallet, upstream outage, "service
+// is down", etc.) mean the service can't complete a lookup for us. Flag these so
+// the applicant sees an accurate "service unavailable" message instead of a
+// misleading "no record found" error.
+const PROVIDER_DOWN_HINTS = [
+  'insufficient', 'balance', 'wallet', 'fund', 'top up', 'top-up',
+  'recharge', 'exhausted', 'unavailable', 'maintenance', 'timeout',
+  'temporarily', 'try again', 'down', 'service', 'unable', 'failed',
+  'error', 'rejected', 'denied', 'blocked', 'not funded', 'unreachable',
+]
+
+function isProviderDown(msg: string | undefined): boolean {
+  if (!msg) return false
+  const m = msg.toLowerCase()
+  return PROVIDER_DOWN_HINTS.some((h) => m.includes(h))
+}
+
 // Normalize a date of birth to YYYY-MM-DD so the form's <input type="date">
 // displays it. Providers return mixed formats (BVN often "DD-Mon-YYYY").
 function normDob(raw: unknown): string {
@@ -80,7 +104,7 @@ function normDob(raw: unknown): string {
 
 async function call(path: string, body: Record<string, unknown>): Promise<VerifyResult> {
   if (!API_KEY || !API_SECRET) {
-    return { ok: false, error: 'Identity verification is not configured. Please contact support.' }
+    return { ok: false, serviceDown: true, error: 'Identity verification is not configured. Please contact support.' }
   }
 
   let res: Response
@@ -97,20 +121,27 @@ async function call(path: string, body: Record<string, unknown>): Promise<Verify
       signal: AbortSignal.timeout(30_000),
     })
   } catch {
-    return { ok: false, error: 'Could not reach the verification service. Please try again shortly.' }
+    return { ok: false, serviceDown: true, error: 'The identity verification service is currently unavailable. Please try again shortly.' }
   }
 
   let json: HyparrowEnvelope
   try {
     json = (await res.json()) as HyparrowEnvelope
   } catch {
-    return { ok: false, error: 'Unexpected response from the verification service.' }
+    return { ok: false, serviceDown: true, error: 'Unexpected response from the verification service.' }
   }
 
   const inner = json.data
   const ok = res.ok && (json.success ?? false) && (inner?.response_code === '00' || inner?.success === true)
   if (!ok) {
     const msg = inner?.message || json.message
+    // A 5xx / gateway timeout, or a provider-side failure (e.g. an unfunded
+    // wallet) means the service is effectively down for us — not that the
+    // record is missing. Flag it so the client can offer to defer KYC and move
+    // on, while a genuine "no record" stays a hard failure.
+    if (res.status >= 500 || isProviderDown(msg)) {
+      return { ok: false, serviceDown: true, error: msg || 'The identity verification service is currently unavailable.' }
+    }
     return { ok: false, error: msg || 'No record found for the number provided.' }
   }
 

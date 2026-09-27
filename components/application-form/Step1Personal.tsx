@@ -86,12 +86,43 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
     setVerifying(false)
   }
 
+  // Steady bypass: always available. The applicant continues without NIN/BVN
+  // verification now and completes it later.
+  async function handleDefer() {
+    setVerifyError('')
+    const id = await ensureAppId()
+    if (!id) {
+      setVerifyError('Could not start your application. Please try again.')
+      return
+    }
+    setVerifying(true)
+    try {
+      const res = await fetch('/api/kyc/defer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appId: id }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        setVerifyError(json.error || 'Could not continue. Please try again.')
+        setVerifying(false)
+        return
+      }
+      update({ identity_verify_waived: true })
+      toast.success('Continuing without verification — you will complete it later.')
+    } catch {
+      setVerifyError('Could not reach the verification service. Please try again.')
+    }
+    setVerifying(false)
+  }
+
   // Self-serve identity waiver was removed for production: identity must be
   // verified (NIN/BVN), or waived by ICT/Admin via /waive-verification. The
   // applicant can no longer set identity_verify_waived themselves.
   function handleRetryVerification() {
     update({ identity_verify_waived: false })
     saveProgress({ identity_verify_waived: false })
+    setVerifyError('')
   }
 
   async function handleNext() {
@@ -115,7 +146,7 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
     ['lga_of_origin', 'LGA of origin'],
   ]
   const missing = REQUIRED.filter(([k]) => !form[k]).map(([, label]) => label)
-  const valid = form.identity_verified && missing.length === 0
+  const valid = (form.identity_verified || form.identity_verify_waived) && missing.length === 0
 
   // Only lock a KYC field if it actually came back with a value — otherwise the
   // applicant would be stuck with a blank, un-editable required field.
@@ -126,21 +157,7 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
       <CardContent className="p-6 space-y-4">
         {/* Identity verification — NIN or BVN against the government record */}
         <div className={`rounded-lg border p-4 ${verified ? 'border-green-300 bg-green-50' : waived ? 'border-amber-300 bg-amber-50' : 'border-cjtf-green/40 bg-cjtf-green/5'}`}>
-          {waived && !verified ? (
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="font-semibold text-amber-800">Continuing without NIN/BVN</p>
-                <p className="text-xs text-amber-700 mt-1">
-                  Fill in your name, date of birth and gender below yourself. Bring a means of
-                  identification to the office — staff will verify you in person before your ID
-                  card is issued.
-                </p>
-              </div>
-              <Button type="button" variant="outline" size="sm" onClick={handleRetryVerification}>
-                Try verification again
-              </Button>
-            </div>
-          ) : verified ? (
+          {verified ? (
             <div className="flex items-start gap-4">
               {form.passport_photo_url && (
                 <Image
@@ -169,12 +186,26 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
                 </p>
               </div>
             </div>
+          ) : waived ? (
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-semibold text-amber-800">Continuing without NIN/BVN</p>
+                <p className="text-xs text-amber-700 mt-1">
+                  Fill in your name, date of birth and gender below yourself. Bring a means of
+                  identification to the office — staff will verify you in person before your ID
+                  card is issued.
+                </p>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={handleRetryVerification}>
+                Try verification again
+              </Button>
+            </div>
           ) : (
             <>
               <p className="font-semibold text-gray-800">Verify your identity</p>
               <p className="text-xs text-gray-500 mt-0.5 mb-3">
                 Enter your NIN or BVN. We confirm it against the national record and fill in your
-                details automatically. If you don&apos;t have one, you can continue without it.
+                details automatically.
               </p>
               <div className="flex flex-col sm:flex-row gap-2">
                 <Select value={method} onValueChange={(v) => { setMethod(v as 'nin' | 'bvn'); setNumber(''); setVerifyError('') }}>
@@ -201,6 +232,15 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
                 </Button>
               </div>
               {verifyError && <p className="text-sm text-red-600 mt-2">{verifyError}</p>}
+              <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 p-3">
+                <p className="text-xs text-blue-800">
+                  Can&apos;t verify right now? Continue without NIN/BVN verification and
+                  complete it later — it will be required before your ID card is issued.
+                </p>
+                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={handleDefer} disabled={verifying}>
+                  {verifying ? 'Continuing…' : 'Continue without verification'}
+                </Button>
+              </div>
             </>
           )}
         </div>
