@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
 import { sendSms } from '@/lib/termii'
 import { STAFF_ROLES, canRegister } from '@/lib/roles'
+import { normalizeSectorName } from '@/lib/sectors'
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -82,6 +83,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   // rejects outright instead of silently ignoring.
   if (updates.date_of_birth === '') updates.date_of_birth = null
   if (updates.gender === '') updates.gender = null
+  // Keep Sector Command / Sub Sector / Unit tidy so print batches group cleanly.
+  for (const k of ['sector_command', 'sub_sector', 'unit'] as const) {
+    if (typeof updates[k] === 'string') updates[k] = normalizeSectorName(updates[k] as string)
+  }
 
   const { data, error } = await service
     .from('applications')

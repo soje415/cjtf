@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { officeChecksRelaxed } from '@/lib/pilot'
+import { prepareUpload, UploadRejected } from '@/lib/prepare-upload'
 
 const STEP_TITLES = ['Registrant & Identity', 'Office Details', 'Photos & Endorsement', 'Review & Submit']
 const TITLES = ['Mr', 'Mrs', 'Miss', 'Ms', 'Dr', 'Alhaji', 'Hajia', 'Chief']
@@ -459,15 +460,20 @@ function StepPhotos({ form, update, saving, ensureRegId, onBack, onNext }: {
   const [uploadingDoc, setUploadingDoc] = useState(false)
 
   async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const picked = e.target.files?.[0]
+    if (!picked) return
     const id = await ensureRegId()
     if (!id) { toast.error('Please complete the earlier steps first.'); return }
     setUploadingPhoto(true)
+    let file: File
+    try { file = await prepareUpload(picked) } catch (err) {
+      toast.error(err instanceof UploadRejected ? err.message : 'Could not process this file.')
+      setUploadingPhoto(false); e.target.value = ''; return
+    }
     try {
       const res = await fetch('/api/upload', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileName: file.name, contentType: file.type, applicationId: id }),
+        body: JSON.stringify({ fileName: file.name, contentType: file.type, fileSize: file.size, applicationId: id }),
       })
       const json = await res.json()
       if (!res.ok) { toast.error(json.error ?? 'Failed to get upload URL'); setUploadingPhoto(false); return }
@@ -485,11 +491,16 @@ function StepPhotos({ form, update, saving, ensureRegId, onBack, onNext }: {
   }
 
   async function handleEndorsement(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const picked = e.target.files?.[0]
+    if (!picked) return
     const id = await ensureRegId()
     if (!id) { toast.error('Please complete the earlier steps first.'); return }
     setUploadingDoc(true)
+    let file: File
+    try { file = await prepareUpload(picked) } catch (err) {
+      toast.error(err instanceof UploadRejected ? err.message : 'Could not process this file.')
+      setUploadingDoc(false); e.target.value = ''; return
+    }
     try {
       const res = await fetch(`/api/office/${id}/upload-endorsement`, {
         method: 'POST', headers: { 'Content-Type': file.type }, body: file,

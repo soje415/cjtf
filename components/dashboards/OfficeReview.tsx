@@ -8,6 +8,7 @@ import { OfficeRegistration, ApplicationNote } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
+import { prepareUpload, UploadRejected } from '@/lib/prepare-upload'
 
 export default function OfficeReview({
   registration,
@@ -53,9 +54,14 @@ export default function OfficeReview({
   }
 
   async function uploadEndorsement(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const picked = e.target.files?.[0]
+    if (!picked) return
     setUploading(true)
+    let file: File
+    try { file = await prepareUpload(picked) } catch (err) {
+      toast.error(err instanceof UploadRejected ? err.message : 'Could not process this file.')
+      setUploading(false); e.target.value = ''; return
+    }
     try {
       const res = await fetch(`/api/office/${reg.id}/upload-endorsement`, {
         method: 'POST', headers: { 'Content-Type': file.type }, body: file,

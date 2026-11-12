@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent } from '@/components/ui/card'
 import { toast } from 'sonner'
+import { prepareUpload, UploadRejected, MAX_UPLOAD_LABEL } from '@/lib/prepare-upload'
 
 interface Props {
   form: FormData
@@ -53,8 +54,8 @@ export default function Step4Documents({ form, update, saveProgress, saving, mem
   )
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>, field: DocField) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const picked = e.target.files?.[0]
+    if (!picked) return
 
     if (!appId) {
       toast.error('Please complete the previous steps first.')
@@ -63,11 +64,22 @@ export default function Step4Documents({ form, update, saveProgress, saving, mem
 
     setUploading(field)
 
+    // Shrink photos in the browser and enforce the 2 MB ceiling before anything is sent.
+    let file: File
+    try {
+      file = await prepareUpload(picked)
+    } catch (err) {
+      toast.error(err instanceof UploadRejected ? err.message : 'Could not process this file.')
+      e.target.value = ''
+      setUploading(null)
+      return
+    }
+
     try {
       const res = await fetch('/api/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileName: file.name, contentType: file.type, applicationId: appId }),
+        body: JSON.stringify({ fileName: file.name, contentType: file.type, fileSize: file.size, applicationId: appId }),
       })
       const json = await res.json()
       if (!res.ok) {
@@ -107,7 +119,7 @@ export default function Step4Documents({ form, update, saveProgress, saving, mem
   return (
     <Card>
       <CardContent className="p-6 space-y-5">
-        <p className="text-sm text-gray-500">Upload clear photos or scanned copies. Items marked * are required.</p>
+        <p className="text-sm text-gray-500">Upload clear photos or scanned copies. Items marked * are required. Each file must be {MAX_UPLOAD_LABEL} or smaller (photos are compressed automatically).</p>
         {DOCS.map(({ field, label, accept, required }) => (
           <div key={field} className="space-y-1">
             <Label>{label}{required ? ' *' : ' (optional)'}</Label>

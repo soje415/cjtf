@@ -3,6 +3,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
 import { canRegister } from '@/lib/roles'
 
+const MAX_UPLOAD_BYTES = 3 * 1024 * 1024
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
 const ALLOWED_EXT = new Set(['jpg', 'jpeg', 'png', 'webp', 'pdf'])
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -13,9 +14,14 @@ export async function POST(req: NextRequest) {
   const user = _session?.user
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { fileName, contentType, applicationId } = await req.json()
+  const { fileName, contentType, applicationId, fileSize } = await req.json()
   if (!fileName || !applicationId) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+  }
+  // The browser compresses before upload, so a declared size over the ceiling is
+  // a stale/modified client. (The bucket's file_size_limit is the hard backstop.)
+  if (typeof fileSize === 'number' && fileSize > MAX_UPLOAD_BYTES) {
+    return NextResponse.json({ error: 'File is too large. Maximum size is 3 MB.' }, { status: 413 })
   }
   if (!UUID_RE.test(applicationId)) {
     return NextResponse.json({ error: 'Invalid document owner id' }, { status: 400 })

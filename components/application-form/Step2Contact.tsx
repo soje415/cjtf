@@ -1,6 +1,8 @@
 'use client'
 
+import { useEffect, useMemo, useState } from 'react'
 import { FormData } from './ApplicationForm'
+import { normalizeSectorName, sectorKey } from '@/lib/sectors'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -24,8 +26,37 @@ interface Props {
 export default function Step2Contact({ form, update, saveProgress, saving, onNext, onBack }: Props) {
   const lgas: string[] = form.state_of_residence ? getLgas(form.state_of_residence) : []
 
+  // Existing Sector Commands / Sub Sectors, offered as suggestions so applicants
+  // reuse the established spelling (the print queue groups by these values).
+  const [sectorOptions, setSectorOptions] = useState<{ name: string; subs: string[] }[]>([])
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/sectors')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (!cancelled && j?.sectors) setSectorOptions(j.sectors) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+  const subOptions = useMemo(() => {
+    const match = sectorOptions.find((s) => sectorKey(s.name) === sectorKey(form.sector_command))
+    // Known sector → its sub sectors; otherwise offer all of them.
+    return match ? match.subs : [...new Set(sectorOptions.flatMap((s) => s.subs))].sort()
+  }, [sectorOptions, form.sector_command])
+
+  /** On blur: tidy the text and snap to an existing spelling when it matches one. */
+  function tidySector(field: 'sector_command' | 'sub_sector', options: string[]) {
+    const tidy = normalizeSectorName(form[field])
+    const existing = options.find((o) => sectorKey(o) === sectorKey(tidy))
+    const next = existing ?? tidy
+    if (next !== form[field]) update({ [field]: next })
+  }
+
   async function handleNext() {
-    await saveProgress({})
+    await saveProgress({
+      sector_command: normalizeSectorName(form.sector_command),
+      sub_sector: normalizeSectorName(form.sub_sector),
+      unit: normalizeSectorName(form.unit),
+    })
     onNext()
   }
 
@@ -87,17 +118,32 @@ export default function Step2Contact({ form, update, saveProgress, saving, onNex
               <Label>Sector Command *</Label>
               <Input
                 value={form.sector_command}
+                list="sector-command-options"
                 onChange={(e) => update({ sector_command: e.target.value })}
+                onBlur={() => tidySector('sector_command', sectorOptions.map((s) => s.name))}
                 placeholder="e.g. FCT Command"
+                maxLength={80}
+                autoComplete="off"
               />
+              <datalist id="sector-command-options">
+                {sectorOptions.map((s) => <option key={s.name} value={s.name} />)}
+              </datalist>
             </div>
             <div className="space-y-1">
               <Label>Sub Sector *</Label>
               <Input
                 value={form.sub_sector}
+                list="sub-sector-options"
                 onChange={(e) => update({ sub_sector: e.target.value })}
+                onBlur={() => tidySector('sub_sector', subOptions)}
                 placeholder="e.g. Garki Sub Sector"
+                maxLength={80}
+                autoComplete="off"
               />
+              <datalist id="sub-sector-options">
+                {subOptions.map((s) => <option key={s} value={s} />)}
+              </datalist>
+              <p className="text-[11px] text-gray-400">Pick from the list if yours appears — it keeps ID batches grouped correctly.</p>
             </div>
             <div className="space-y-1">
               <Label>Unit (optional)</Label>

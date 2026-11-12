@@ -29,6 +29,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const ext = contentType.includes('pdf') ? 'pdf' : contentType.includes('png') ? 'png' : 'jpg'
   const buffer = Buffer.from(await req.arrayBuffer())
   if (buffer.length === 0) return NextResponse.json({ error: 'Empty file' }, { status: 400 })
+  if (buffer.length > 3 * 1024 * 1024) {
+    return NextResponse.json({ error: 'File is too large. Maximum size is 3 MB.' }, { status: 413 })
+  }
 
   const path = `${reg.registrant_id}/office-endorsement-${params.id}-${Date.now()}.${ext}`
   const { error: upErr } = await service.storage

@@ -1,0 +1,94 @@
+// Sector Command / Sub Sector handling. These fields were free text, so the same
+// place arrived as "Garki", "garki ", "GARKI SUB SECTOR"… Everything that groups
+// by sector (the print queue) goes through sectorKey(); everything that stores a
+// sector goes through normalizeSectorName() so new data stays clean.
+
+const GENERIC_WORDS = /\b(sub[\s-]*sector|sector|command|cmd)\b/g
+
+/** Tidy a typed sector name: trim, collapse spaces, sensible capitalisation.
+ *  Short all-caps words (FCT, NSCDC, ABC) are kept as acronyms. */
+export function normalizeSectorName(input: string | null | undefined): string {
+  const cleaned = (input ?? '')
+    .replace(/[\u0000-\u001f]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/^[\s.,;:\-–]+|[\s.,;:\-–]+$/g, '')
+    .trim()
+  if (!cleaned) return ''
+  // An all-caps entry ("GARKI SUB SECTOR") is shouting, not acronyms — title-case
+  // it, keeping only known acronyms. Mixed-case entries keep short caps words
+  // ("FCT Command") as typed.
+  const shouting = !/[a-z]/.test(cleaned)
+  return cleaned
+    .split(' ')
+    .map((w) => {
+      if (KNOWN_ACRONYMS.has(w.toUpperCase())) return w.toUpperCase()
+      if (!shouting && /^[A-Z0-9&]{2,4}$/.test(w) && !GENERIC_WORD_SET.has(w.toLowerCase())) return w
+      return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+    })
+    .join(' ')
+}
+
+const KNOWN_ACRONYMS = new Set(['FCT', 'CJTF', 'HQ', 'LGA', 'NSCDC', 'FCDA', 'AMAC'])
+const GENERIC_WORD_SET = new Set(['sub', 'unit', 'area', 'zone', 'cmd'])
+
+/** Case/spacing/suffix-insensitive grouping key: "Garki Sub Sector" == "garki". */
+export function sectorKey(input: string | null | undefined): string {
+  return (input ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(GENERIC_WORDS, ' ')
+    .replace(/[\s-]+/g, ' ')
+    .trim()
+}
+
+export interface SectorRow {
+  id: string
+  sector_command: string | null
+  sub_sector: string | null
+}
+
+export interface SectorGroup<T extends SectorRow> {
+  groupKey: string          // `${sectorKey}|${subKey}`
+  sectorCommand: string     // display spelling (most common)
+  subSector: string
+  assigned: boolean         // false when either field is empty → cannot be batched
+  rows: T[]
+}
+
+function mostCommon(values: string[]): string {
+  const counts = new Map<string, number>()
+  for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1)
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].length - b[0].length)[0]?.[0] ?? ''
+}
+
+export function makeGroupKey(sector: string | null | undefined, sub: string | null | undefined): string {
+  return `${sectorKey(sector)}|${sectorKey(sub)}`
+}
+
+/** Group rows by (sector, sub sector), merging spelling variants. */
+export function groupBySector<T extends SectorRow>(rows: T[]): SectorGroup<T>[] {
+  const map = new Map<string, T[]>()
+  for (const r of rows) {
+    const k = makeGroupKey(r.sector_command, r.sub_sector)
+    const list = map.get(k) ?? []
+    list.push(r)
+    map.set(k, list)
+  }
+  const groups: SectorGroup<T>[] = []
+  for (const [groupKey, list] of map) {
+    const [sc, ss] = groupKey.split('|')
+    groups.push({
+      groupKey,
+      sectorCommand: mostCommon(list.map((r) => normalizeSectorName(r.sector_command)).filter(Boolean)) || 'Unassigned',
+      subSector: mostCommon(list.map((r) => normalizeSectorName(r.sub_sector)).filter(Boolean)) || 'Unassigned',
+      assigned: !!sc && !!ss,
+      rows: list,
+    })
+  }
+  return groups.sort(
+    (a, b) =>
+      Number(b.assigned) - Number(a.assigned) ||
+      a.sectorCommand.localeCompare(b.sectorCommand) ||
+      a.subSector.localeCompare(b.subSector)
+  )
+}

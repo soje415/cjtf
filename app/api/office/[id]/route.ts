@@ -3,6 +3,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { sendSms } from '@/lib/termii'
 import { officeChecksRelaxed, describeSkippedOfficeChecks } from '@/lib/pilot'
 import { canRegister } from '@/lib/roles'
+import { normalizeSectorName } from '@/lib/sectors'
 
 const STAFF_ROLES = ['ict', 'int', 'admin', 'executive']
 
@@ -73,6 +74,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   // rejects outright instead of silently ignoring.
   if (updates.date_of_birth === '') updates.date_of_birth = null
   if (updates.gender === '') updates.gender = null
+  for (const k of ['sector_command', 'sub_sector', 'unit'] as const) {
+    if (typeof updates[k] === 'string') updates[k] = normalizeSectorName(updates[k] as string)
+  }
 
   const { data, error } = await service
     .from('office_registrations')

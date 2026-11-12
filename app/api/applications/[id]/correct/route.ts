@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { normalizeSectorName } from '@/lib/sectors'
 
 // Applicant-submitted fields INT/Admin may correct after ICT intake. NIN and
 // BVN are deliberately excluded — those only change through the identity
@@ -53,7 +54,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const diffLines: string[] = []
   for (const k of keys) {
     const raw = updates[k]
-    const newVal = typeof raw === 'string' ? raw.trim() : raw
+    const isSectorField = k === 'sector_command' || k === 'sub_sector' || k === 'unit'
+    const newVal = typeof raw === 'string' ? (isSectorField ? normalizeSectorName(raw) : raw.trim()) : raw
     const oldVal = beforeRow[k]
     if ((oldVal ?? '') === (newVal ?? '')) continue
     payload[k] = newVal === '' ? null : newVal
