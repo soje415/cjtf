@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     identity_verify_waived: true,
     identity_verify_waived_by: null,
     identity_verify_waived_reason:
-      'Registrant continued without NIN/BVN verification — identity verification required before permit issuance.',
+      'Registrant continued without BVN verification — identity verification required before permit issuance.',
     updated_at: new Date().toISOString(),
   }).eq('id', regId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

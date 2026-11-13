@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Application, ApplicationStatus, STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { identityRow } from '@/lib/identity'
 
 type Row = Application & { profiles?: { full_name: string } }
 
@@ -46,7 +47,7 @@ export default function ExecutiveApplicantsTable({ applications }: { application
         <div className="flex gap-2">
           <input
             className={inputCls}
-            placeholder="Search name, NIN, CJTF ID…"
+            placeholder="Search name, CJTF ID…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -67,7 +68,7 @@ export default function ExecutiveApplicantsTable({ applications }: { application
               <thead>
                 <tr className="border-b text-gray-500 text-xs uppercase">
                   <th className="text-left pb-2 pr-4">Name</th>
-                  <th className="text-left pb-2 pr-4">NIN</th>
+                  <th className="text-left pb-2 pr-4">Identity</th>
                   <th className="text-left pb-2 pr-4">State / LGA</th>
                   <th className="text-left pb-2 pr-4">Stage</th>
                   <th className="text-left pb-2 pr-4">CJTF ID</th>
@@ -79,7 +80,7 @@ export default function ExecutiveApplicantsTable({ applications }: { application
                 {filtered.map((a) => (
                   <tr key={a.id} className="border-b last:border-0 hover:bg-gray-50">
                     <td className="py-2 pr-4 font-medium">{a.first_name} {a.last_name}</td>
-                    <td className="py-2 pr-4 text-gray-600">{a.nin || '—'}</td>
+                    <td className="py-2 pr-4 text-gray-600">{identityRow(a)[1]}</td>
                     <td className="py-2 pr-4 text-gray-600">{a.state_of_origin} / {a.lga_of_origin}</td>
                     <td className="py-2 pr-4">
                       <Badge className={STATUS_COLORS[a.status]}>{STATUS_LABELS[a.status]}</Badge>

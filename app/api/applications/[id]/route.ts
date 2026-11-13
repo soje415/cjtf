@@ -136,10 +136,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
   }
 
-  // Identity must be verified (NIN/BVN) — or explicitly waived by ICT/Admin.
+  // Identity must be verified (BVN) — or explicitly waived by ICT/Admin.
   if (!app.identity_verified && !app.identity_verify_waived) {
     return NextResponse.json(
-      { error: 'Please verify your identity with your NIN or BVN before submitting your application.' },
+      { error: 'Please verify your identity with your BVN before submitting your application.' },
       { status: 403 }
     )
   }

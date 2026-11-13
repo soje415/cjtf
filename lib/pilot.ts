@@ -9,7 +9,7 @@
 
 /**
  * Relax the office-registration submit gates: the office-space photo upload and
- * the NIN/BVN identity confirmation stop blocking submission.
+ * the BVN identity confirmation stop blocking submission.
  *
  * ⚠️ With this on, an office registration can reach INT screening with no photo
  * of the premises and no verified identity behind it. INT and Admin still review
@@ -26,7 +26,7 @@ export function describeSkippedOfficeChecks(opts: {
 }): string | null {
   const skipped: string[] = []
   if (opts.missingPhotos) skipped.push('no office-space photo uploaded')
-  if (opts.missingIdentity) skipped.push('identity (NIN/BVN) not verified')
+  if (opts.missingIdentity) skipped.push('identity (BVN) not verified')
   if (skipped.length === 0) return null
   return `Submitted under pilot relaxed checks — ${skipped.join('; ')}. Re-verify before the permit is treated as fully vetted.`
 }

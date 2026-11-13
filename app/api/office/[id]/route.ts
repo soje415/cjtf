@@ -131,7 +131,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   for (const [field, value] of required) {
     if (!value) return NextResponse.json({ error: `Missing required field: ${field}` }, { status: 400 })
   }
-  // Office-space photo + NIN/BVN identity confirmation. Both are normally hard
+  // Office-space photo + BVN identity confirmation. Both are normally hard
   // gates; the pilot flag turns them into recorded exceptions instead of
   // blockers so the flow can be exercised end to end. See lib/pilot.ts.
   const relaxed = officeChecksRelaxed()
@@ -144,7 +144,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   if (missingIdentity && !relaxed) {
     return NextResponse.json(
-      { error: 'Please verify your identity with your NIN or BVN before submitting.' },
+      { error: 'Please verify your identity with your BVN before submitting.' },
       { status: 403 }
     )
   }

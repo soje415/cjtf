@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient, createClient } from '@/lib/supabase/server'
 import { canRegister } from '@/lib/roles'
 
-// POST /api/kyc/defer — lets the applicant continue without NIN/BVN verification
+// POST /api/kyc/defer — lets the applicant continue without BVN verification
 // now and complete it later. Always available (a steady bypass) so registrations
 // aren't blocked when the KYC provider is down or the wallet is unfunded.
 export async function POST(req: NextRequest) {
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     identity_verify_waived: true,
     identity_verify_waived_by: null,
     identity_verify_waived_reason:
-      'Applicant continued without NIN/BVN verification — identity verification required before ID issuance.',
+      'Applicant continued without BVN verification — identity verification required before ID issuance.',
     updated_at: new Date().toISOString(),
   }).eq('id', appId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -18,6 +18,7 @@ import SignaturePad from '@/components/id-card/SignaturePad'
 import { memberVerifyUrl } from '@/lib/portal-url'
 import { captureFrontAndBackAsPdf, toDataUrl } from '@/lib/capture-pdf'
 import { toast } from 'sonner'
+import { identityRow } from '@/lib/identity'
 
 interface Props {
   application: Application
@@ -326,7 +327,7 @@ export default function IctApplicationReview({ application, payments, notes }: P
               ['Rank', application.cjtf_rank ?? 'Not yet assigned'],
               ['Date of Birth', application.date_of_birth ?? '—'],
               ['Gender', application.gender ?? '—'],
-              ['NIN', application.nin || '—'],
+              identityRow(application),
               ['State', application.state_of_origin],
               ['LGA', application.lga_of_origin],
               ['Phone', application.phone_number],
@@ -398,13 +399,13 @@ export default function IctApplicationReview({ application, payments, notes }: P
             </p>
           ) : (
             <>
-              <p className="text-red-600 font-medium">✗ Identity not verified (no NIN/BVN match on file)</p>
+              <p className="text-red-600 font-medium">✗ Identity not verified (no BVN match on file)</p>
               {isVerification && (
                 <div className="flex gap-2 pt-1">
                   <Input
                     value={waiveReason}
                     onChange={(e) => setWaiveReason(e.target.value)}
-                    placeholder="Reason to waive (e.g. no NIN/BVN, verified manually)"
+                    placeholder="Reason to waive (e.g. no BVN, verified manually)"
                     className="flex-1"
                   />
                   <Button variant="outline" onClick={handleWaive} disabled={waiving}>

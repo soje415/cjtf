@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient, createClient } from '@/lib/supabase/server'
 
 // POST /api/applications/[id]/waive-verification — ICT or Admin override.
-// Used when an applicant genuinely has no NIN/BVN or the KYC provider was
+// Used when an applicant genuinely has no BVN or the KYC provider was
 // unreachable, so identity verification could not be completed automatically.
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const supabase = createClient()

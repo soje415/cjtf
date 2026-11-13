@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { Application, Payment, ApplicationNote, STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { identityRow } from '@/lib/identity'
 
 interface Props {
   application: Application
@@ -57,7 +58,7 @@ export default function ExecutiveApplicationView({ application, payments, notes 
               ['Full Name', `${a.first_name} ${a.middle_name ?? ''} ${a.last_name}`],
               ['Date of Birth', a.date_of_birth ?? '—'],
               ['Gender', a.gender ?? '—'],
-              ['NIN', a.nin || '—'],
+              identityRow(a),
               ['State / LGA', `${a.state_of_origin} / ${a.lga_of_origin}`],
               ['Residential Address', a.residential_address || '—'],
               ['Phone', a.phone_number || '—'],

@@ -207,8 +207,9 @@ function StepRegistrant({ form, update, saving, ensureRegId, saveProgress, onNex
   form: FormState; update: (f: Partial<FormState>) => void; saving: boolean
   ensureRegId: () => Promise<string | null>; saveProgress: (f: Partial<FormState>) => Promise<boolean>; onNext: () => void
 }) {
-  const [method, setMethod] = useState<'nin' | 'bvn'>((form.identity_verify_method as 'nin' | 'bvn') || 'nin')
-  const [number, setNumber] = useState(form.identity_verify_method === 'bvn' ? form.bvn : form.nin)
+  // Identity verification is BVN-only.
+  const method = 'bvn' as const
+  const [number, setNumber] = useState(form.bvn)
   const [verifying, setVerifying] = useState(false)
   const [verifyError, setVerifyError] = useState('')
   const verified = form.identity_verified
@@ -238,7 +239,7 @@ function StepRegistrant({ form, update, saving, ensureRegId, saveProgress, onNex
         date_of_birth: p.date_of_birth, gender: p.gender,
         identity_verified: true, identity_verify_method: method, identity_verify_waived: false,
       }
-      if (method === 'nin') fields.nin = number; else fields.bvn = number
+      fields.bvn = number
       update(fields)
       toast.success('Identity verified ✓')
     } catch {
@@ -247,7 +248,7 @@ function StepRegistrant({ form, update, saving, ensureRegId, saveProgress, onNex
     setVerifying(false)
   }
 
-  // Steady bypass: always available. The registrant continues without NIN/BVN
+  // Steady bypass: always available. The registrant continues without BVN
   // verification now and completes it later.
   async function handleDefer() {
     setVerifyError('')
@@ -270,7 +271,7 @@ function StepRegistrant({ form, update, saving, ensureRegId, saveProgress, onNex
   }
 
   // Self-serve identity waiver was removed for production: identity must be
-  // verified (NIN/BVN). The registrant can no longer set identity_verify_waived
+  // verified (BVN). The registrant can no longer set identity_verify_waived
   // themselves (the field is no longer in the PATCH allowlist either).
   function handleRetryVerification() {
     update({ identity_verify_waived: false })
@@ -300,7 +301,7 @@ function StepRegistrant({ form, update, saving, ensureRegId, saveProgress, onNex
               <div>
                 <p className="font-semibold text-amber-800">Verification skipped</p>
                 <p className="text-xs text-amber-700 mt-1">
-                  You&apos;re continuing without NIN/BVN verification. Fill in your name, date of birth and
+                  You&apos;re continuing without BVN verification. Fill in your name, date of birth and
                   gender yourself — staff will review this manually.
                 </p>
               </div>
@@ -311,12 +312,8 @@ function StepRegistrant({ form, update, saving, ensureRegId, saveProgress, onNex
           ) : (
             <>
               <p className="font-semibold text-gray-800">Verify your identity</p>
-              <p className="text-xs text-gray-500 mt-0.5 mb-3">Enter your NIN or BVN. This is required before you can submit.</p>
+              <p className="text-xs text-gray-500 mt-0.5 mb-3">Enter your BVN. This is required before you can submit.</p>
               <div className="flex flex-col sm:flex-row gap-2">
-                <Select value={method} onValueChange={(v) => { setMethod(v as 'nin' | 'bvn'); setNumber(''); setVerifyError('') }}>
-                  <SelectTrigger className="sm:w-28"><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="nin">NIN</SelectItem><SelectItem value="bvn">BVN</SelectItem></SelectContent>
-                </Select>
                 <Input value={number} onChange={(e) => setNumber(e.target.value.replace(/\D/g, '').slice(0, 11))}
                   placeholder={`11-digit ${method.toUpperCase()}`} inputMode="numeric" className="flex-1" />
                 <Button type="button" onClick={handleVerify} disabled={verifying || number.length !== 11} className="bg-cjtf-green hover:bg-cjtf-green-dark">
@@ -326,7 +323,7 @@ function StepRegistrant({ form, update, saving, ensureRegId, saveProgress, onNex
               {verifyError && <p className="text-sm text-red-600 mt-2">{verifyError}</p>}
               <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 p-3">
                 <p className="text-xs text-blue-800">
-                  Can&apos;t verify right now? Continue without NIN/BVN verification and
+                  Can&apos;t verify right now? Continue without BVN verification and
                   complete it later — it will be required before your permit is issued.
                 </p>
                 <Button type="button" variant="outline" size="sm" className="mt-2" onClick={handleDefer} disabled={verifying}>
@@ -363,7 +360,7 @@ function StepRegistrant({ form, update, saving, ensureRegId, saveProgress, onNex
 
         {!verified && !waived && (
           <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-            Verify your NIN or BVN above to continue.
+            Verify your BVN above to continue.
           </p>
         )}
         {(verified || waived) && missing.length > 0 && (

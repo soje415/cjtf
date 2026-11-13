@@ -17,6 +17,7 @@ import { CJTF_RANKS, DEFAULT_RECOMMENDED_RANK, type CjtfRank } from '@/lib/ranks
 import { toast } from 'sonner'
 import ApplicantDetailsEditor from './ApplicantDetailsEditor'
 import DocumentWaivers from './DocumentWaivers'
+import { identityRow } from '@/lib/identity'
 
 interface Props {
   application: Application
@@ -119,7 +120,7 @@ export default function AdminApplicationReview({ application, payments, notes }:
                 ['Full Name', `${application.first_name} ${application.middle_name ?? ''} ${application.last_name}`],
                 ['Date of Birth', application.date_of_birth ?? '—'],
                 ['Gender', application.gender ?? '—'],
-                ['NIN', application.nin || '—'],
+                identityRow(application),
                 ['State of Origin', application.state_of_origin],
                 ['Address', application.residential_address],
                 ['Sector Command', application.sector_command || '—'],
@@ -159,13 +160,13 @@ export default function AdminApplicationReview({ application, payments, notes }:
             </p>
           ) : (
             <>
-              <p className="text-red-600 font-medium">✗ Identity not verified (no NIN/BVN match on file)</p>
+              <p className="text-red-600 font-medium">✗ Identity not verified (no BVN match on file)</p>
               {isReview && (
                 <div className="flex gap-2 pt-1">
                   <Input
                     value={waiveReason}
                     onChange={(e) => setWaiveReason(e.target.value)}
-                    placeholder="Reason to waive (e.g. no NIN/BVN, verified manually)"
+                    placeholder="Reason to waive (e.g. no BVN, verified manually)"
                     className="flex-1"
                   />
                   <Button variant="outline" onClick={handleWaive} disabled={waiving}>

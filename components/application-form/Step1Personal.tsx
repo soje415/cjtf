@@ -30,10 +30,9 @@ interface Props {
 export default function Step1Personal({ form, update, saveProgress, saving, ensureAppId, onNext }: Props) {
   const lgas: string[] = form.state_of_origin ? getLgas(form.state_of_origin) : []
 
-  const [method, setMethod] = useState<'nin' | 'bvn'>(
-    (form.identity_verify_method as 'nin' | 'bvn') || 'nin'
-  )
-  const [number, setNumber] = useState(form.identity_verify_method === 'bvn' ? form.bvn : form.nin)
+  // Identity verification is BVN-only.
+  const method = 'bvn' as const
+  const [number, setNumber] = useState(form.bvn)
   const [verifying, setVerifying] = useState(false)
   const [verifyError, setVerifyError] = useState('')
 
@@ -75,8 +74,7 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
         identity_verify_method: method,
         identity_verify_waived: false,
       }
-      if (method === 'nin') fields.nin = number
-      else fields.bvn = number
+      fields.bvn = number
       if (json.passport_photo_url) fields.passport_photo_url = json.passport_photo_url
       update(fields)
       toast.success('Identity verified ✓')
@@ -86,7 +84,7 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
     setVerifying(false)
   }
 
-  // Steady bypass: always available. The applicant continues without NIN/BVN
+  // Steady bypass: always available. The applicant continues without BVN
   // verification now and completes it later.
   async function handleDefer() {
     setVerifyError('')
@@ -117,7 +115,7 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
   }
 
   // Self-serve identity waiver was removed for production: identity must be
-  // verified (NIN/BVN), or waived by ICT/Admin via /waive-verification. The
+  // verified (BVN), or waived by ICT/Admin via /waive-verification. The
   // applicant can no longer set identity_verify_waived themselves.
   function handleRetryVerification() {
     update({ identity_verify_waived: false })
@@ -155,7 +153,7 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
   return (
     <Card>
       <CardContent className="p-6 space-y-4">
-        {/* Identity verification — NIN or BVN against the government record */}
+        {/* Identity verification — BVN against the government record */}
         <div className={`rounded-lg border p-4 ${verified ? 'border-green-300 bg-green-50' : waived ? 'border-amber-300 bg-amber-50' : 'border-cjtf-green/40 bg-cjtf-green/5'}`}>
           {verified ? (
             <div className="flex items-start gap-4">
@@ -189,7 +187,7 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
           ) : waived ? (
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="font-semibold text-amber-800">Continuing without NIN/BVN</p>
+                <p className="font-semibold text-amber-800">Continuing without BVN verification</p>
                 <p className="text-xs text-amber-700 mt-1">
                   Fill in your name, date of birth and gender below yourself. Bring a means of
                   identification to the office — staff will verify you in person before your ID
@@ -204,17 +202,10 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
             <>
               <p className="font-semibold text-gray-800">Verify your identity</p>
               <p className="text-xs text-gray-500 mt-0.5 mb-3">
-                Enter your NIN or BVN. We confirm it against the national record and fill in your
+                Enter your BVN. We confirm it against the national record and fill in your
                 details automatically.
               </p>
               <div className="flex flex-col sm:flex-row gap-2">
-                <Select value={method} onValueChange={(v) => { setMethod(v as 'nin' | 'bvn'); setNumber(''); setVerifyError('') }}>
-                  <SelectTrigger className="sm:w-28"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="nin">NIN</SelectItem>
-                    <SelectItem value="bvn">BVN</SelectItem>
-                  </SelectContent>
-                </Select>
                 <Input
                   value={number}
                   onChange={(e) => setNumber(e.target.value.replace(/\D/g, '').slice(0, 11))}
@@ -234,7 +225,7 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
               {verifyError && <p className="text-sm text-red-600 mt-2">{verifyError}</p>}
               <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 p-3">
                 <p className="text-xs text-blue-800">
-                  Can&apos;t verify right now? Continue without NIN/BVN verification and
+                  Can&apos;t verify right now? Continue without BVN verification and
                   complete it later — it will be required before your ID card is issued.
                 </p>
                 <Button type="button" variant="outline" size="sm" className="mt-2" onClick={handleDefer} disabled={verifying}>
@@ -369,7 +360,7 @@ export default function Step1Personal({ form, update, saveProgress, saving, ensu
 
         {!verified && !waived && (
           <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-            Verify your NIN or BVN above to continue.
+            Verify your BVN above to continue.
           </p>
         )}
 

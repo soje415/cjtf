@@ -3,7 +3,7 @@ import { createServiceClient, createClient } from '@/lib/supabase/server'
 import { verifyIdentity, IdentityMethod } from '@/lib/hyparrow'
 import { canRegister } from '@/lib/roles'
 
-// POST /api/kyc/verify — applicant verifies their NIN or BVN.
+// POST /api/kyc/verify — applicant verifies their BVN.
 // On success the government-confirmed name/DOB/gender are written to the
 // application (the form locks these fields), the official passport photo is
 // stored as the default ID photo, and identity_verified is set true.
@@ -14,8 +14,11 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { appId, method, number } = await req.json()
-  if (!appId || (method !== 'nin' && method !== 'bvn') || !number) {
-    return NextResponse.json({ error: 'appId, method (nin|bvn) and number are required.' }, { status: 400 })
+  if (method === 'nin') {
+    return NextResponse.json({ error: 'Identity verification now uses BVN only. Please enter your BVN.' }, { status: 400 })
+  }
+  if (!appId || method !== 'bvn' || !number) {
+    return NextResponse.json({ error: 'appId, method (bvn) and number are required.' }, { status: 400 })
   }
 
   const service = createServiceClient()

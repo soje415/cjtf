@@ -3,7 +3,7 @@ import { createServiceClient, createClient } from '@/lib/supabase/server'
 import { verifyIdentity, IdentityMethod } from '@/lib/hyparrow'
 import { canRegister } from '@/lib/roles'
 
-// POST /api/office/kyc/verify — office registrant verifies NIN or BVN.
+// POST /api/office/kyc/verify — office registrant verifies BVN.
 // On success the government name/DOB/gender are written to the registration
 // (the form locks them) and identity_verified is set true. Mirrors the
 // recruitment KYC route (app/api/kyc/verify).
@@ -14,8 +14,11 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { regId, method, number } = await req.json()
-  if (!regId || (method !== 'nin' && method !== 'bvn') || !number) {
-    return NextResponse.json({ error: 'regId, method (nin|bvn) and number are required.' }, { status: 400 })
+  if (method === 'nin') {
+    return NextResponse.json({ error: 'Identity verification now uses BVN only. Please enter your BVN.' }, { status: 400 })
+  }
+  if (!regId || method !== 'bvn' || !number) {
+    return NextResponse.json({ error: 'regId, method (bvn) and number are required.' }, { status: 400 })
   }
 
   const service = createServiceClient()

@@ -16,6 +16,7 @@ import { CJTF_RANKS, DEFAULT_RECOMMENDED_RANK, type CjtfRank } from '@/lib/ranks
 import { toast } from 'sonner'
 import ApplicantDetailsEditor from './ApplicantDetailsEditor'
 import DocumentWaivers from './DocumentWaivers'
+import { identityRow } from '@/lib/identity'
 
 interface Props {
   application: Application
@@ -84,7 +85,7 @@ export default function IntApplicationReview({ application, notes }: Props) {
                 ['Full Name', `${application.first_name} ${application.middle_name ?? ''} ${application.last_name}`],
                 ['Date of Birth', application.date_of_birth ?? '—'],
                 ['Gender', application.gender ?? '—'],
-                ['NIN', application.nin || '—'],
+                identityRow(application),
                 ['State of Origin', application.state_of_origin],
                 ['Phone', application.phone_number],
                 ['Address', application.residential_address],

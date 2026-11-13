@@ -4,6 +4,7 @@ import { FormData } from './ApplicationForm'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import { maskDigits } from '@/lib/identity'
 
 interface Props {
   form: FormData
@@ -47,7 +48,7 @@ export default function Step5Review({ form, saving, membershipType, phoneVerifie
           <Row label="Distinguishing Marks" value={form.distinguishing_marks} />
           <Row label="Occupation" value={form.occupation} />
           <Row label="Education" value={form.education} />
-          <Row label="NIN" value={form.nin} />
+          <Row label="BVN" value={maskDigits(form.bvn)} />
           <Row label="State / LGA of Origin" value={`${form.state_of_origin} / ${form.lga_of_origin}`} />
         </div>
 
