@@ -7,13 +7,15 @@ import { BATCH_STATUS_LABELS, BATCH_STATUS_COLORS, canViewBatches, canSendBatche
 
 const FILTERS: { value: 'open' | 'all' | BatchStatus; label: string }[] = [
   { value: 'open', label: 'Open' },
+  { value: 'with_admin', label: 'Awaiting Admin' },
+  { value: 'with_ict', label: 'With ICT' },
   { value: 'printed', label: 'Printed' },
   { value: 'collected', label: 'Collected' },
   { value: 'cancelled', label: 'Cancelled' },
   { value: 'all', label: 'All' },
 ]
 
-// Batch list — ICT's print inbox, and INT/Admin's view of what they've sent.
+// Batch list — Admin's inbox of INT batches, ICT's inbox of forwarded batches, and INT's view of what they've sent.
 export default async function PrintBatchesPage({ searchParams }: { searchParams: { status?: string } }) {
   const supabase = createClient()
   const service = createServiceClient()
@@ -25,9 +27,11 @@ export default async function PrintBatchesPage({ searchParams }: { searchParams:
   const role = profile?.role as string | undefined
   if (!canViewBatches(role)) redirect('/auth/login')
 
-  const filter = FILTERS.some((f) => f.value === searchParams.status) ? (searchParams.status as string) : 'open'
+  // Each role lands on the batches waiting on them.
+  const defaultFilter = role === 'admin' ? 'with_admin' : role === 'ict' ? 'with_ict' : 'open'
+  const filter = FILTERS.some((f) => f.value === searchParams.status) ? (searchParams.status as string) : defaultFilter
   let q = service.from('print_batches').select('*').order('created_at', { ascending: false }).limit(200)
-  if (filter === 'open') q = q.eq('status', 'sent')
+  if (filter === 'open') q = q.in('status', ['with_admin', 'with_ict'])
   else if (filter !== 'all') q = q.eq('status', filter)
   const { data } = await q
   const batches = (data ?? []) as PrintBatch[]
@@ -48,7 +52,11 @@ export default async function PrintBatchesPage({ searchParams }: { searchParams:
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Print Batches</h1>
           <p className="text-gray-500 text-sm">
-            {role === 'ict' ? 'ID card batches sent to ICT for printing, by sector and sub-sector.' : 'ID card batches sent to ICT, with their print status.'}
+            {role === 'ict'
+              ? 'Batches forwarded to ICT for ID generation, by sector and sub-sector.'
+              : role === 'admin'
+                ? 'Batches INT has sent for your review, and where each one is now.'
+                : 'Batches you have sent to Admin, and where each one is now.'}
           </p>
         </div>
         {canSendBatches(role) && (
@@ -82,10 +90,10 @@ export default async function PrintBatchesPage({ searchParams }: { searchParams:
                   <tr className="border-b text-gray-500 text-xs uppercase">
                     <th className="text-left pb-2 pr-4">Batch</th>
                     <th className="text-left pb-2 pr-4">Sector / Sub Sector</th>
-                    <th className="text-left pb-2 pr-4">Cards</th>
+                    <th className="text-left pb-2 pr-4">Applicants</th>
                     <th className="text-left pb-2 pr-4">Sent by</th>
                     <th className="text-left pb-2 pr-4">Status</th>
-                    <th className="text-left pb-2 pr-4">Sent</th>
+                    <th className="text-left pb-2 pr-4">Created</th>
                     <th className="text-left pb-2" />
                   </tr>
                 </thead>
@@ -103,7 +111,7 @@ export default async function PrintBatchesPage({ searchParams }: { searchParams:
                       <td className="py-2 pr-4 text-gray-500">{new Date(b.created_at).toLocaleDateString('en-NG')}</td>
                       <td className="py-2">
                         <LinkButton href={`/portal/staff/print/${b.id}`} size="sm" variant="outline" className="text-xs border-cjtf-green text-cjtf-green hover:bg-cjtf-green-light">
-                          {role === 'ict' && b.status === 'sent' ? 'Open & print' : 'View'}
+                          {role === 'admin' && b.status === 'with_admin' ? 'Review' : role === 'ict' && b.status === 'with_ict' ? 'Open' : 'View'}
                         </LinkButton>
                       </td>
                     </tr>

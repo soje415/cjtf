@@ -13,10 +13,13 @@ interface Props {
   status: BatchStatus
   role: string
   cardUrls: string[]
+  /** applicants in the batch */
   cardCount: number
+  /** how many of them already have a generated card */
+  generatedCount: number
 }
 
-export default function BatchActions({ batchId, batchNo, status, role, cardUrls, cardCount }: Props) {
+export default function BatchActions({ batchId, batchNo, status, role, cardUrls, cardCount, generatedCount }: Props) {
   const router = useRouter()
   const [busy, setBusy] = useState<string | null>(null)
   const [progress, setProgress] = useState('')
@@ -105,20 +108,71 @@ export default function BatchActions({ batchId, batchNo, status, role, cardUrls,
   }
 
   const isIct = role === 'ict'
-  const canSend = role === 'int' || role === 'admin'
+  const isAdmin = role === 'admin'
+  const isInt = role === 'int'
   const disabled = !!busy
+  const allGenerated = cardCount > 0 && generatedCount === cardCount
 
   return (
     <Card>
       <CardContent className="pt-6 space-y-4">
-        {status === 'sent' && isIct && (
+        {status === 'with_admin' && isAdmin && (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600">INT sent this batch for your review. Forward it to ICT to start ID generation, or return it to INT.</p>
+            <input
+              type="text" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500}
+              placeholder="Note (optional for forwarding, shown to INT if returned)"
+              className="w-full border rounded px-3 py-1.5 text-sm"
+            />
+            <div className="flex flex-wrap items-center gap-3">
+              <Button disabled={disabled} className="bg-cjtf-green hover:bg-cjtf-green-dark"
+                onClick={async () => { if (await act('forward', reason, 'Batch forwarded to ICT.')) setReason('') }}>
+                {busy === 'forward' ? 'Forwarding…' : 'Forward to ICT'}
+              </Button>
+              <Button variant="outline" disabled={disabled} className="border-red-300 text-red-700 hover:bg-red-50"
+                onClick={async () => {
+                  if (!confirm('Return this batch to INT? Its applicants go back to the INT queue.')) return
+                  if (await act('return', reason, 'Batch returned to INT.')) setReason('')
+                }}>
+                {busy === 'return' ? 'Returning…' : 'Return to INT'}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {status === 'with_admin' && !isAdmin && (
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm text-gray-600">Waiting for Admin to review and forward this batch to ICT.</p>
+            {isInt && (
+              <Button
+                variant="outline" disabled={disabled} className="border-red-300 text-red-700 hover:bg-red-50"
+                onClick={() => {
+                  if (!confirm('Cancel this batch? Its applicants go back to the queue.')) return
+                  act('cancel', undefined, 'Batch cancelled.')
+                }}
+              >
+                {busy === 'cancel' ? 'Cancelling…' : 'Cancel batch'}
+              </Button>
+            )}
+          </div>
+        )}
+
+        {status === 'with_ict' && (
+          <p className="text-sm text-gray-700">
+            <span className="font-medium">{generatedCount} / {cardCount}</span> ID cards generated.
+            {isIct && !allGenerated && ' Open each applicant below to generate their ID.'}
+            {!isIct && ' ICT is generating the IDs.'}
+          </p>
+        )}
+
+        {status === 'with_ict' && isIct && (
           <div className="flex flex-wrap items-center gap-3">
             <Button onClick={downloadPrintFile} disabled={disabled || cardUrls.length === 0} className="bg-cjtf-green hover:bg-cjtf-green-dark">
-              {busy === 'download' ? progress || 'Preparing…' : `Download print file (${cardCount} cards, PDF)`}
+              {busy === 'download' ? progress || 'Preparing…' : `Download print file (${cardUrls.length} cards, PDF)`}
             </Button>
             <Button
               variant="outline"
-              disabled={disabled}
+              disabled={disabled || !allGenerated}
               onClick={() => {
                 if (!downloaded && !confirm('You have not downloaded the print file in this session. Mark as printed anyway?')) return
                 act('printed', undefined, 'Batch marked as printed.')
@@ -126,12 +180,25 @@ export default function BatchActions({ batchId, batchNo, status, role, cardUrls,
             >
               {busy === 'printed' ? 'Saving…' : 'Mark as printed'}
             </Button>
+            {!allGenerated && <p className="w-full text-xs text-amber-700">Generate every applicant&apos;s ID before marking the batch printed.</p>}
             <p className="w-full text-xs text-gray-500">Each card is two pages (front then back), CR80 size — print duplex or two-sided on the badge printer.</p>
           </div>
         )}
 
-        {status === 'sent' && !isIct && (
-          <p className="text-sm text-gray-600">Waiting for ICT to print this batch.</p>
+        {status === 'with_ict' && isAdmin && (
+          <div>
+            <Button
+              variant="outline"
+              disabled={disabled}
+              className="border-red-300 text-red-700 hover:bg-red-50"
+              onClick={() => {
+                if (!confirm('Cancel this batch? Its applicants go back to the queue. Cards already generated are kept.')) return
+                act('cancel', undefined, 'Batch cancelled.')
+              }}
+            >
+              {busy === 'cancel' ? 'Cancelling…' : 'Cancel batch'}
+            </Button>
+          </div>
         )}
 
         {status === 'printed' && (
@@ -144,22 +211,6 @@ export default function BatchActions({ batchId, batchNo, status, role, cardUrls,
                 {busy === 'download' ? progress || 'Preparing…' : 'Download print file again'}
               </Button>
             )}
-          </div>
-        )}
-
-        {status === 'sent' && canSend && (
-          <div>
-            <Button
-              variant="outline"
-              disabled={disabled}
-              className="border-red-300 text-red-700 hover:bg-red-50"
-              onClick={() => {
-                if (!confirm('Cancel this batch? Its cards go back to the print queue.')) return
-                act('cancel', undefined, 'Batch cancelled.')
-              }}
-            >
-              {busy === 'cancel' ? 'Cancelling…' : 'Cancel batch'}
-            </Button>
           </div>
         )}
 

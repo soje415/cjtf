@@ -6,13 +6,15 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { normalizeSectorName, sectorKey } from '@/lib/sectors'
 
 export interface QueueRow {
   id: string
   name: string
   cjtfId: string | null
   unit: string | null
-  hasCard: boolean
+  /** true when the ID card has already been generated (legacy / carded applicants) */
+  carded: boolean
 }
 
 export interface QueueGroup {
@@ -23,7 +25,9 @@ export interface QueueGroup {
   rows: QueueRow[]
 }
 
-export default function PrintQueueClient({ groups }: { groups: QueueGroup[] }) {
+const ALL = ''
+
+export default function PrintQueueClient({ groups, role }: { groups: QueueGroup[]; role: 'int' | 'admin' }) {
   const router = useRouter()
   // selected ids per group
   const [selected, setSelected] = useState<Record<string, Set<string>>>({})
@@ -31,16 +35,68 @@ export default function PrintQueueClient({ groups }: { groups: QueueGroup[] }) {
   const [notes, setNotes] = useState<Record<string, string>>({})
   const [sending, setSending] = useState<string | null>(null)
 
+  // ── filters: Sector → Sub Sector → Unit, plus a name / ID search ────────
+  const [sector, setSector] = useState(ALL)
+  const [sub, setSub] = useState(ALL)
+  const [unit, setUnit] = useState(ALL)
+  const [search, setSearch] = useState('')
+
+  const sectorOptions = useMemo(
+    () => [...new Set(groups.map((g) => g.sectorCommand))].sort((a, b) => a.localeCompare(b)),
+    [groups]
+  )
+  // Sub sectors narrow to the chosen sector.
+  const subOptions = useMemo(
+    () =>
+      [...new Set(groups.filter((g) => !sector || g.sectorCommand === sector).map((g) => g.subSector))].sort((a, b) =>
+        a.localeCompare(b)
+      ),
+    [groups, sector]
+  )
+  // Units narrow to the chosen sector / sub sector. Spelling variants merge by key.
+  const unitOptions = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const g of groups) {
+      if (sector && g.sectorCommand !== sector) continue
+      if (sub && g.subSector !== sub) continue
+      for (const r of g.rows) {
+        const k = sectorKey(r.unit)
+        if (k && !m.has(k)) m.set(k, normalizeSectorName(r.unit))
+      }
+    }
+    return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1]))
+  }, [groups, sector, sub])
+
+  // Apply the filters. A group survives only with rows left in it.
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    const out: QueueGroup[] = []
+    for (const g of groups) {
+      if (sector && g.sectorCommand !== sector) continue
+      if (sub && g.subSector !== sub) continue
+      const rows = g.rows.filter((r) => {
+        if (unit && sectorKey(r.unit) !== unit) return false
+        if (q && !r.name.toLowerCase().includes(q) && !(r.cjtfId ?? '').toLowerCase().includes(q)) return false
+        return true
+      })
+      if (rows.length) out.push({ ...g, rows })
+    }
+    return out
+  }, [groups, sector, sub, unit, search])
+
+  const filtering = !!(sector || sub || unit || search.trim())
+  const totalShown = filtered.reduce((n, g) => n + g.rows.length, 0)
+
   // Group by sector command for a two-level display.
   const bySector = useMemo(() => {
     const m = new Map<string, QueueGroup[]>()
-    for (const g of groups) {
+    for (const g of filtered) {
       const list = m.get(g.sectorCommand) ?? []
       list.push(g)
       m.set(g.sectorCommand, list)
     }
     return [...m.entries()]
-  }, [groups])
+  }, [filtered])
 
   function toggle(groupKey: string, id: string) {
     setSelected((s) => {
@@ -51,17 +107,24 @@ export default function PrintQueueClient({ groups }: { groups: QueueGroup[] }) {
     })
   }
 
+  // "Select all" acts on the rows the filters currently show.
   function toggleAll(g: QueueGroup) {
-    const ready = g.rows.filter((r) => r.hasCard).map((r) => r.id)
+    const visible = g.rows.map((r) => r.id)
     setSelected((s) => {
-      const cur = s[g.groupKey] ?? new Set<string>()
-      const all = ready.every((id) => cur.has(id))
-      return { ...s, [g.groupKey]: new Set(all ? [] : ready) }
+      const cur = new Set(s[g.groupKey] ?? [])
+      const all = visible.every((id) => cur.has(id))
+      for (const id of visible) {
+        if (all) cur.delete(id)
+        else cur.add(id)
+      }
+      return { ...s, [g.groupKey]: cur }
     })
   }
 
   async function send(g: QueueGroup) {
-    const ids = [...(selected[g.groupKey] ?? [])]
+    // Only ids still visible under the current filters are sent.
+    const visible = new Set(g.rows.map((r) => r.id))
+    const ids = [...(selected[g.groupKey] ?? [])].filter((id) => visible.has(id))
     if (ids.length === 0) return
     setSending(g.groupKey)
     try {
@@ -75,7 +138,7 @@ export default function PrintQueueClient({ groups }: { groups: QueueGroup[] }) {
         toast.error(json.error ?? 'Could not send this batch.')
         router.refresh()
       } else {
-        toast.success(`${ids.length} card(s) sent to ICT — batch ${json.batch?.batch_no ?? ''}`)
+        toast.success(`${ids.length} applicant(s) sent to ${role === 'int' ? 'Admin' : 'ICT'} — batch ${json.batch?.batch_no ?? ''}`)
         setSelected((s) => ({ ...s, [g.groupKey]: new Set() }))
         router.refresh()
       }
@@ -89,23 +152,82 @@ export default function PrintQueueClient({ groups }: { groups: QueueGroup[] }) {
     return (
       <Card>
         <CardContent className="py-10 text-center text-sm text-gray-500">
-          No completed ID cards are waiting to be sent for printing.
+          No approved applicants are waiting to be batched.
         </CardContent>
       </Card>
     )
   }
 
+  const selectCls = 'border rounded px-3 py-1.5 text-sm bg-white min-w-[160px]'
+
   return (
     <div className="space-y-6">
-      {bySector.map(([sector, subs]) => (
-        <div key={sector} className="space-y-3">
+      {/* Filter bar */}
+      <Card>
+        <CardContent className="pt-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="text-xs text-gray-500 space-y-1">
+              <span className="block">Sector Command</span>
+              <select
+                className={selectCls}
+                value={sector}
+                onChange={(e) => { setSector(e.target.value); setSub(ALL); setUnit(ALL) }}
+              >
+                <option value={ALL}>All sectors</option>
+                {sectorOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </label>
+            <label className="text-xs text-gray-500 space-y-1">
+              <span className="block">Sub Sector</span>
+              <select className={selectCls} value={sub} onChange={(e) => { setSub(e.target.value); setUnit(ALL) }}>
+                <option value={ALL}>All sub sectors</option>
+                {subOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </label>
+            <label className="text-xs text-gray-500 space-y-1">
+              <span className="block">Unit</span>
+              <select className={selectCls} value={unit} onChange={(e) => setUnit(e.target.value)}>
+                <option value={ALL}>All units</option>
+                {unitOptions.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+              </select>
+            </label>
+            <label className="text-xs text-gray-500 space-y-1 flex-1 min-w-[180px]">
+              <span className="block">Search name or CJTF ID</span>
+              <input
+                type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…"
+                className="w-full border rounded px-3 py-1.5 text-sm"
+              />
+            </label>
+            {filtering && (
+              <Button variant="outline" size="sm" onClick={() => { setSector(ALL); setSub(ALL); setUnit(ALL); setSearch('') }}>
+                Clear filters
+              </Button>
+            )}
+          </div>
+          <p className="mt-3 text-xs text-gray-500">
+            {totalShown} applicant(s) in {filtered.length} group(s){filtering ? ' match your filters' : ''}.
+            A batch holds one Sector and Sub Sector; the Unit filter narrows who goes in it.
+          </p>
+        </CardContent>
+      </Card>
+
+      {filtered.length === 0 && (
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-gray-500">No applicants match these filters.</CardContent>
+        </Card>
+      )}
+
+      {bySector.map(([sectorName, subs]) => (
+        <div key={sectorName} className="space-y-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
-            {sector} <span className="font-normal normal-case text-gray-400">· {subs.reduce((n, g) => n + g.rows.length, 0)} card(s)</span>
+            {sectorName} <span className="font-normal normal-case text-gray-400">· {subs.reduce((n, g) => n + g.rows.length, 0)} applicant(s)</span>
           </h2>
           {subs.map((g) => {
             const sel = selected[g.groupKey] ?? new Set<string>()
-            const ready = g.rows.filter((r) => r.hasCard)
-            const isOpen = open[g.groupKey]
+            const selVisible = g.rows.filter((r) => sel.has(r.id)).length
+            // A filtered view auto-expands; otherwise it's click-to-review.
+            const isOpen = open[g.groupKey] ?? filtering
+            const awaitingId = g.rows.filter((r) => !r.carded).length
             return (
               <Card key={g.groupKey}>
                 <CardHeader className="pb-3">
@@ -113,8 +235,8 @@ export default function PrintQueueClient({ groups }: { groups: QueueGroup[] }) {
                     <div>
                       <CardTitle className="text-base">{g.subSector}</CardTitle>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {g.rows.length} completed card(s) · {ready.length} ready to print
-                        {g.rows.length - ready.length > 0 && ` · ${g.rows.length - ready.length} missing card file`}
+                        {g.rows.length} applicant(s) · {awaitingId} awaiting ID generation
+                        {g.rows.length - awaitingId > 0 && ` · ${g.rows.length - awaitingId} card already generated`}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -124,7 +246,7 @@ export default function PrintQueueClient({ groups }: { groups: QueueGroup[] }) {
                         size="sm"
                         onClick={() => setOpen((o) => ({ ...o, [g.groupKey]: !isOpen }))}
                       >
-                        {isOpen ? 'Hide cards' : 'Review cards'}
+                        {isOpen ? 'Hide applicants' : 'Review applicants'}
                       </Button>
                     </div>
                   </div>
@@ -145,15 +267,16 @@ export default function PrintQueueClient({ groups }: { groups: QueueGroup[] }) {
                               {g.assigned && (
                                 <input
                                   type="checkbox"
-                                  aria-label="Select all ready cards"
-                                  checked={ready.length > 0 && ready.every((r) => sel.has(r.id))}
+                                  aria-label="Select all shown applicants"
+                                  checked={g.rows.length > 0 && g.rows.every((r) => sel.has(r.id))}
                                   onChange={() => toggleAll(g)}
                                 />
                               )}
                             </th>
                             <th className="text-left pb-2 pr-4">Name</th>
                             <th className="text-left pb-2 pr-4">CJTF ID</th>
-                            <th className="text-left pb-2">Unit</th>
+                            <th className="text-left pb-2 pr-4">Unit</th>
+                            <th className="text-left pb-2">ID card</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -162,7 +285,7 @@ export default function PrintQueueClient({ groups }: { groups: QueueGroup[] }) {
                               <td className="py-1.5">
                                 <input
                                   type="checkbox"
-                                  disabled={!g.assigned || !r.hasCard}
+                                  disabled={!g.assigned}
                                   checked={sel.has(r.id)}
                                   onChange={() => toggle(g.groupKey, r.id)}
                                   aria-label={`Select ${r.name}`}
@@ -170,9 +293,11 @@ export default function PrintQueueClient({ groups }: { groups: QueueGroup[] }) {
                               </td>
                               <td className="py-1.5 pr-4 font-medium">{r.name}</td>
                               <td className="py-1.5 pr-4 text-gray-600">{r.cjtfId ?? '—'}</td>
-                              <td className="py-1.5 text-gray-600">
-                                {r.unit || '—'}
-                                {!r.hasCard && <span className="ml-2 text-xs text-amber-700">no card file</span>}
+                              <td className="py-1.5 pr-4 text-gray-600">{normalizeSectorName(r.unit) || '—'}</td>
+                              <td className="py-1.5">
+                                {r.carded
+                                  ? <span className="text-xs text-green-700">Generated</span>
+                                  : <span className="text-xs text-amber-700">Awaiting generation</span>}
                               </td>
                             </tr>
                           ))}
@@ -185,16 +310,16 @@ export default function PrintQueueClient({ groups }: { groups: QueueGroup[] }) {
                           type="text"
                           value={notes[g.groupKey] ?? ''}
                           onChange={(e) => setNotes((n) => ({ ...n, [g.groupKey]: e.target.value }))}
-                          placeholder="Note for ICT (optional)"
+                          placeholder={`Note for ${role === 'int' ? 'Admin' : 'ICT'} (optional)`}
                           maxLength={500}
                           className="flex-1 min-w-[200px] border rounded px-3 py-1.5 text-sm"
                         />
                         <Button
                           onClick={() => send(g)}
-                          disabled={sel.size === 0 || sending === g.groupKey}
+                          disabled={selVisible === 0 || sending === g.groupKey}
                           className="bg-cjtf-green hover:bg-cjtf-green-dark"
                         >
-                          {sending === g.groupKey ? 'Sending…' : `Send ${sel.size} to ICT for printing`}
+                          {sending === g.groupKey ? 'Sending…' : `Send ${selVisible} to ${role === 'int' ? 'Admin' : 'ICT'}`}
                         </Button>
                       </div>
                     )}

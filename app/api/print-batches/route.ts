@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStaffSession, logPrintEvent } from '@/lib/print-batches-server'
-import { canSendBatches } from '@/lib/print-batches'
+import { canSendBatches, BATCHABLE_STATUSES } from '@/lib/print-batches'
 import { makeGroupKey, normalizeSectorName } from '@/lib/sectors'
 import { sendSms } from '@/lib/termii'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const MAX_CARDS_PER_BATCH = 200
 
-// POST: INT / Admin send a sector + sub-sector group of completed ID cards to
-// ICT for printing. Body: { groupKey, applicationIds: string[], note?: string }
+// POST: build a batch of approved applicants from one sector + sub-sector group.
+//   INT   → batch starts 'with_admin' (Admin reviews and forwards it to ICT)
+//   Admin → batch starts 'with_ict'   (Admin is the forwarding authority)
+// ICT then generates each person's card. Body: { groupKey, applicationIds, note? }
 export async function POST(req: NextRequest) {
   const staff = await getStaffSession()
   if (!staff) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -21,10 +23,10 @@ export async function POST(req: NextRequest) {
   const ids: string[] = Array.isArray(body?.applicationIds) ? [...new Set<string>(body.applicationIds)] : []
 
   if (!groupKey || ids.length === 0) {
-    return NextResponse.json({ error: 'Select at least one card to send.' }, { status: 400 })
+    return NextResponse.json({ error: 'Select at least one applicant to send.' }, { status: 400 })
   }
   if (ids.length > MAX_CARDS_PER_BATCH) {
-    return NextResponse.json({ error: `A batch can hold at most ${MAX_CARDS_PER_BATCH} cards. Send the group in parts.` }, { status: 400 })
+    return NextResponse.json({ error: `A batch can hold at most ${MAX_CARDS_PER_BATCH} applicants. Send the group in parts.` }, { status: 400 })
   }
   if (!ids.every((i) => UUID_RE.test(i))) {
     return NextResponse.json({ error: 'Invalid application id' }, { status: 400 })
@@ -32,11 +34,11 @@ export async function POST(req: NextRequest) {
 
   const { data: apps, error: readErr } = await service
     .from('applications')
-    .select('id, status, print_status, id_card_pdf_url, sector_command, sub_sector')
+    .select('id, status, print_status, sector_command, sub_sector')
     .in('id', ids)
   if (readErr) return NextResponse.json({ error: readErr.message }, { status: 500 })
   if (!apps || apps.length !== ids.length) {
-    return NextResponse.json({ error: 'Some selected cards no longer exist.' }, { status: 400 })
+    return NextResponse.json({ error: 'Some selected applicants no longer exist.' }, { status: 400 })
   }
 
   const [scKey, ssKey] = groupKey.split('|')
@@ -44,17 +46,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'This group has no Sector Command / Sub Sector. Fix the applicants’ records first.' }, { status: 400 })
   }
   for (const a of apps) {
-    if (a.status !== 'COMPLETED') {
-      return NextResponse.json({ error: 'Only cards with a completed ID can be sent for printing.' }, { status: 400 })
+    if (!(BATCHABLE_STATUSES as readonly string[]).includes(a.status)) {
+      return NextResponse.json({ error: 'Only approved applicants can be put in a batch.' }, { status: 400 })
     }
     if (a.print_status !== 'not_queued') {
-      return NextResponse.json({ error: 'One or more selected cards were already sent for printing. Refresh and try again.' }, { status: 409 })
-    }
-    if (!a.id_card_pdf_url) {
-      return NextResponse.json({ error: 'One or more selected cards have no generated card file yet.' }, { status: 400 })
+      return NextResponse.json({ error: 'One or more selected applicants are already in a batch. Refresh and try again.' }, { status: 409 })
     }
     if (makeGroupKey(a.sector_command, a.sub_sector) !== groupKey) {
-      return NextResponse.json({ error: 'All cards in a batch must belong to the same sector and sub-sector.' }, { status: 400 })
+      return NextResponse.json({ error: 'All applicants in a batch must belong to the same sector and sub-sector.' }, { status: 400 })
     }
   }
 
@@ -74,6 +73,7 @@ export async function POST(req: NextRequest) {
       sub_sector: subSector,
       group_key: groupKey,
       card_count: ids.length,
+      status: staff.role === 'admin' ? 'with_ict' : 'with_admin',
       requested_by: staff.userId,
       requested_role: staff.role,
       note,
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
     const claimedIds = (claimed ?? []).map((r) => r.id)
     if (claimedIds.length) await service.from('applications').update({ print_status: 'not_queued' }).in('id', claimedIds)
     await service.from('print_batches').delete().eq('id', batch.id)
-    return NextResponse.json({ error: 'Some cards were just sent by someone else. Refresh and try again.' }, { status: 409 })
+    return NextResponse.json({ error: 'Some applicants were just batched by someone else. Refresh and try again.' }, { status: 409 })
   }
 
   const { error: itemsErr } = await service
@@ -113,14 +113,17 @@ export async function POST(req: NextRequest) {
 
   await logPrintEvent(service, batch.id, staff.userId, staff.role, 'sent', note)
 
-  // Alert ICT (best effort — never fail the request over an SMS).
+  // Alert whoever holds the batch next (best effort — never fail over an SMS).
   try {
-    const { data: ict } = await service.from('profiles').select('phone').eq('role', 'ict')
-    const phones = (ict ?? []).map((p) => p.phone).filter(Boolean) as string[]
+    const nextRole = staff.role === 'admin' ? 'ict' : 'admin'
+    const { data: next } = await service.from('profiles').select('phone').eq('role', nextRole)
+    const phones = (next ?? []).map((p) => p.phone).filter(Boolean) as string[]
     if (phones.length) {
       await sendSms(
         phones,
-        `CJTF Portal: ${ids.length} ID card(s) for ${sectorCommand} / ${subSector} (${batch.batch_no}) are ready for printing.`
+        nextRole === 'admin'
+          ? `CJTF Portal: INT sent batch ${batch.batch_no} (${ids.length} applicant(s), ${sectorCommand} / ${subSector}) for your review.`
+          : `CJTF Portal: batch ${batch.batch_no} (${ids.length} applicant(s), ${sectorCommand} / ${subSector}) is ready for ID generation.`
       )
     }
   } catch { /* ignore */ }
