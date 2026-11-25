@@ -16,7 +16,8 @@ export default async function IctApplicationPage({ params }: { params: { id: str
     .from('applications')
     .select('*')
     .eq('id', params.id)
-    .in('status', ['PENDING_ICT_VERIFICATION', 'APPROVED_GENERATING_ID'])
+    // COMPLETED stays reachable so a card that failed to save can be saved again.
+    .in('status', ['PENDING_ICT_VERIFICATION', 'APPROVED_GENERATING_ID', 'COMPLETED'])
     .maybeSingle()
 
   if (!app) notFound()

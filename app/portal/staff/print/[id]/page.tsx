@@ -112,9 +112,13 @@ export default async function PrintBatchDetail({ params }: { params: { id: strin
                       <td className="py-1.5 pr-4">
                         {isGenerated(a)
                           ? <span className="text-xs text-green-700">Generated</span>
-                          : role === 'ict' && batch.status === 'with_ict'
-                            ? <Link href={`/portal/ict/application/${a.id}`} className="text-xs text-amber-700 underline">Generate →</Link>
-                            : <span className="text-xs text-amber-700">Awaiting generation</span>}
+                          : a.status === 'COMPLETED'
+                            ? role === 'ict'
+                              ? <Link href={`/portal/ict/application/${a.id}`} className="text-xs text-red-700 underline">ID assigned, card not saved. Re-save →</Link>
+                              : <span className="text-xs text-red-700">ID assigned, card not saved</span>
+                            : role === 'ict' && batch.status === 'with_ict'
+                              ? <Link href={`/portal/ict/application/${a.id}`} className="text-xs text-amber-700 underline">Generate →</Link>
+                              : <span className="text-xs text-amber-700">Awaiting generation</span>}
                       </td>
                       <td className="py-1.5 text-gray-600">{PRINT_LABEL[a.print_status] ?? a.print_status}</td>
                     </tr>

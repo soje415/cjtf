@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { Application, Payment, ApplicationNote } from '@/lib/types'
@@ -31,11 +31,28 @@ interface GeneratedResult {
   pdfUrl: string | null
 }
 
+/** Resolve once every image on the card has loaded. A card must never be saved
+ *  with a blank photo or signature because the connection dropped mid-capture. */
+async function waitForImages(elements: HTMLElement[]) {
+  const images = elements.flatMap((el) => Array.from(el.querySelectorAll('img'))).filter((i) => i.getAttribute('src'))
+  try {
+    await Promise.all(images.map((i) => i.decode()))
+  } catch {
+    throw new Error('An image on the card did not load.')
+  }
+}
+
 export default function IctApplicationReview({ application, payments, notes }: Props) {
   const router = useRouter()
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
-  const [generated, setGenerated] = useState<GeneratedResult | null>(null)
+  // An already-issued application opens straight on its card, so it can be
+  // reviewed or — if the PDF never saved — saved again.
+  const [generated, setGenerated] = useState<GeneratedResult | null>(
+    application.status === 'COMPLETED' && application.cjtf_id_number
+      ? { cjtfId: application.cjtf_id_number, pdfUrl: application.id_card_pdf_url }
+      : null
+  )
   const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null)
   const [capturing, setCapturing] = useState(false)
   const [waiveReason, setWaiveReason] = useState('')
@@ -119,76 +136,77 @@ export default function IctApplicationReview({ application, payments, notes }: P
       const d = await res.json()
       if (!res.ok) { toast.error(d.error || 'Failed to generate ID'); setLoading(false); return }
 
-      // 2. Pre-fetch the passport photo as a data URL so html2canvas can read it
-      let photoUrl = application.passport_photo_url ?? ''
-      if (photoUrl) {
-        try { photoUrl = await toDataUrl(photoUrl) } catch { /* use original url */ }
-      }
-      setPhotoDataUrl(photoUrl)
-
-      // 3. Generate the QR code up front so html2canvas never races its image load
-      const verifyUrl = memberVerifyUrl(application.id)
-      try {
-        const QRCode = await import('qrcode')
-        setQrDataUrl(await QRCode.toDataURL(verifyUrl, { width: 96, margin: 1 }))
-      } catch { /* card renders without a QR image if this fails */ }
-
       setGenerated({ cjtfId: d.cjtfId, pdfUrl: null })
       toast.success('ID assigned — capturing card…')
 
-      // 4. Give React one tick to render front + back, then capture both
-      setTimeout(async () => {
-        if (!cardRef.current || !backRef.current) return
-        setCapturing(true)
-        try {
-          const blob = await captureFrontAndBackAsPdf(cardRef.current, backRef.current)
-
-          // 5. Upload to Supabase via server route
-          const uploadRes = await fetch(`/api/applications/${application.id}/save-pdf`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/pdf' },
-            body: blob,
-          })
-          const uploadData = await uploadRes.json()
-          if (uploadRes.ok) {
-            setGenerated({ cjtfId: d.cjtfId, pdfUrl: uploadData.pdfUrl })
-            toast.success('ID Card ready!')
-          } else {
-            toast.error('Card saved but PDF upload failed: ' + uploadData.error)
-            setGenerated({ cjtfId: d.cjtfId, pdfUrl: null })
-          }
-        } catch (e) {
-          toast.error('PDF capture failed: ' + String(e))
-          setGenerated({ cjtfId: d.cjtfId, pdfUrl: null })
-        }
-        setCapturing(false)
-      }, 300)
+      // 2. Capture front + back and upload the PDF
+      await captureAndSave(d.cjtfId)
     } finally {
       setLoading(false)
     }
   }
 
-  async function handleDownload() {
-    if (generated?.pdfUrl) {
-      const a = document.createElement('a')
-      a.href = generated.pdfUrl
-      a.download = `CJTF-ID-${generated.cjtfId}.pdf`
-      a.click()
-      return
+  // Inline the card's remote images as data URLs (html2canvas can read those)
+  // and build the QR code, so the capture never races a network load.
+  async function prepareCardAssets() {
+    const inline = async (url: string | null) => {
+      if (!url || url.startsWith('data:')) return url
+      try { return await toDataUrl(url) } catch { return url }
     }
-    // Fallback: re-capture if no pdfUrl
-    if (!cardRef.current || !backRef.current) return
+    const [photo, holder, officer] = await Promise.all([
+      inline(application.passport_photo_url),
+      inline(holderSig),
+      inline(officerSig),
+    ])
+    setPhotoDataUrl(photo)
+    setHolderSig(holder)
+    setOfficerSig(officer)
+    try {
+      const QRCode = await import('qrcode')
+      setQrDataUrl(await QRCode.toDataURL(memberVerifyUrl(application.id), { width: 96, margin: 1 }))
+    } catch { /* card renders without a QR image if this fails */ }
+  }
+
+  // Used right after generation, and again by "Save card" if that attempt failed.
+  async function captureAndSave(cjtfId: string) {
     setCapturing(true)
     try {
+      await prepareCardAssets()
+      // Give React a moment to render front + back with those assets.
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      if (!cardRef.current || !backRef.current) throw new Error('The card preview is not ready.')
+      await waitForImages([cardRef.current, backRef.current])
       const blob = await captureFrontAndBackAsPdf(cardRef.current, backRef.current)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `CJTF-ID-${generated?.cjtfId ?? 'card'}.pdf`
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch { toast.error('Download failed') }
+
+      // Upload to Supabase via server route
+      const uploadRes = await fetch(`/api/applications/${application.id}/save-pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/pdf' },
+        body: blob,
+      })
+      const uploadData = await uploadRes.json().catch(() => ({}))
+      if (!uploadRes.ok) throw new Error(uploadData.error || `Upload failed (${uploadRes.status}).`)
+      setGenerated({ cjtfId, pdfUrl: uploadData.pdfUrl })
+      toast.success('ID Card ready!')
+    } catch (e) {
+      setGenerated({ cjtfId, pdfUrl: null })
+      toast.error(`Card not saved: ${e instanceof Error ? e.message : String(e)} Press “Save card” to try again.`)
+    }
     setCapturing(false)
+  }
+
+  // Show the photo and QR on an already-issued card.
+  useEffect(() => {
+    if (application.status === 'COMPLETED') prepareCardAssets()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function handleDownload() {
+    if (!generated?.pdfUrl) return
+    const a = document.createElement('a')
+    a.href = generated.pdfUrl
+    a.download = `CJTF-ID-${generated.cjtfId}.pdf`
+    a.click()
   }
 
   // ── Generated state ──
@@ -196,7 +214,9 @@ export default function IctApplicationReview({ application, payments, notes }: P
     const fullName = [application.first_name, application.middle_name, application.last_name]
       .filter(Boolean).join(' ')
     const verifyUrl = memberVerifyUrl(application.id)
-    const issueDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+    // A re-saved card keeps its original issue date.
+    const issueDate = new Date(application.completed_at ?? Date.now())
+      .toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 
     return (
       <div className="max-w-3xl mx-auto space-y-6">
@@ -260,15 +280,15 @@ export default function IctApplicationReview({ application, payments, notes }: P
             <p className="text-sm text-gray-600">
               {generated.pdfUrl
                 ? 'Card saved to applicant portal. Hand or send the PDF below.'
-                : capturing ? 'Capturing PDF from card preview…' : 'PDF not yet saved.'}
+                : capturing ? 'Capturing PDF from card preview…' : 'Card not saved yet. Save it so it can be printed.'}
             </p>
             <div className="flex gap-3 flex-shrink-0">
               <Button
-                onClick={handleDownload}
+                onClick={generated.pdfUrl ? handleDownload : () => captureAndSave(generated.cjtfId)}
                 disabled={capturing}
                 className="bg-cjtf-green hover:bg-cjtf-green-dark text-white"
               >
-                {capturing ? 'Capturing…' : 'Download PDF'}
+                {capturing ? 'Capturing…' : generated.pdfUrl ? 'Download PDF' : 'Save card'}
               </Button>
               {generated.pdfUrl && (
                 <Button variant="outline"

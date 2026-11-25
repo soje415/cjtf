@@ -38,9 +38,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const { data: { publicUrl } } = service.storage.from('id-cards').getPublicUrl(pdfPath)
 
-    await service.from('applications')
+    const { error: saveError } = await service.from('applications')
       .update({ id_card_pdf_url: publicUrl, updated_at: new Date().toISOString() })
       .eq('id', params.id)
+    if (saveError) {
+      return NextResponse.json({ error: 'Could not record the saved card: ' + saveError.message }, { status: 500 })
+    }
 
     return NextResponse.json({ ok: true, pdfUrl: publicUrl })
   } catch (e) {
