@@ -42,9 +42,9 @@ function choices(rows: ScreeningRow[], key: (r: ScreeningRow) => string, label: 
 
 export default function ScreeningQueue({ rows, sectors }: { rows: ScreeningRow[]; sectors: SectorOption[] }) {
   const router = useRouter()
-  // `draft` is what the dropdowns show; `applied` is what Search last ran.
-  const [draft, setDraft] = useState<Filters>(NO_FILTERS)
+  // Dropdowns filter as soon as they change; a typed name waits for Search / Enter.
   const [applied, setApplied] = useState<Filters>(NO_FILTERS)
+  const [name, setName] = useState('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [newRank, setNewRank] = useState<string>(DEFAULT_RECOMMENDED_RANK)
   const [ownRank, setOwnRank] = useState<Record<string, string>>({})
@@ -52,19 +52,19 @@ export default function ScreeningQueue({ rows, sectors }: { rows: ScreeningRow[]
   const [sending, setSending] = useState(false)
 
   const states = useMemo(() => choices(rows, (r) => stateKey(r.state), (r) => (r.state ?? '').trim()), [rows])
-  const subs = sectors.find((s) => s.key === draft.sector)?.subs ?? []
+  const subs = sectors.find((s) => s.key === applied.sector)?.subs ?? []
   const units = useMemo(
     () =>
       choices(
         rows.filter(
           (r) =>
-            (!draft.sector || sectorCommandKey(r.sectorCommand) === draft.sector) &&
-            (!draft.sub || sectorKey(r.subSector) === draft.sub)
+            (!applied.sector || sectorCommandKey(r.sectorCommand) === applied.sector) &&
+            (!applied.sub || sectorKey(r.subSector) === applied.sub)
         ),
         (r) => sectorKey(r.unit),
         (r) => normalizeSectorName(r.unit)
       ),
-    [rows, draft.sector, draft.sub]
+    [rows, applied.sector, applied.sub]
   )
 
   const shown = useMemo(() => {
@@ -105,9 +105,9 @@ export default function ScreeningQueue({ rows, sectors }: { rows: ScreeningRow[]
     setOwnRank({})
   }
 
-  function search(next: Filters) {
-    setDraft(next)
-    setApplied(next)
+  // Changing what is shown drops the ticks, so nobody hidden gets sent.
+  function filterBy(change: Partial<Filters>) {
+    setApplied((f) => ({ ...f, ...change }))
     clearSelection()
   }
 
@@ -150,45 +150,45 @@ export default function ScreeningQueue({ rows, sectors }: { rows: ScreeningRow[]
         </h2>
         <form
           className="grid grid-cols-1 items-end gap-3 p-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6"
-          onSubmit={(e) => { e.preventDefault(); search(draft) }}
+          onSubmit={(e) => { e.preventDefault(); filterBy({ name }) }}
         >
           <label className={label}>
             <span>State</span>
-            <select className={field} value={draft.state} onChange={(e) => setDraft({ ...draft, state: e.target.value })}>
+            <select className={field} value={applied.state} onChange={(e) => filterBy({ state: e.target.value })}>
               <option value="">All states</option>
               {states.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </label>
           <label className={label}>
             <span>Sector</span>
-            <select className={field} value={draft.sector} onChange={(e) => setDraft({ ...draft, sector: e.target.value, sub: '', unit: '' })}>
+            <select className={field} value={applied.sector} onChange={(e) => filterBy({ sector: e.target.value, sub: '', unit: '' })}>
               <option value="">All sectors</option>
               {sectors.map((o) => <option key={o.key} value={o.key}>{o.name} ({o.count})</option>)}
             </select>
           </label>
           <label className={label}>
             <span>Sub-Sector</span>
-            <select className={field} value={draft.sub} disabled={!draft.sector} onChange={(e) => setDraft({ ...draft, sub: e.target.value, unit: '' })}>
-              <option value="">{draft.sector ? 'All sub-sectors' : 'Pick a sector first'}</option>
+            <select className={field} value={applied.sub} disabled={!applied.sector} onChange={(e) => filterBy({ sub: e.target.value, unit: '' })}>
+              <option value="">{applied.sector ? 'All sub-sectors' : 'Pick a sector first'}</option>
               {subs.map((o) => <option key={o.key} value={o.key}>{o.name} ({o.count})</option>)}
             </select>
           </label>
           <label className={label}>
             <span>Unit/Office</span>
-            <select className={field} value={draft.unit} disabled={units.length === 0} onChange={(e) => setDraft({ ...draft, unit: e.target.value })}>
+            <select className={field} value={applied.unit} disabled={units.length === 0} onChange={(e) => filterBy({ unit: e.target.value })}>
               <option value="">{units.length ? 'All units' : 'No units recorded'}</option>
               {units.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </label>
           <label className={label}>
             <span>Name</span>
-            <input type="text" className={field} value={draft.name} placeholder="Any name" onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+            <input type="text" className={field} value={name} placeholder="Any name" onChange={(e) => setName(e.target.value)} />
           </label>
           <div className="flex gap-2">
             <Button type="submit" className="h-[38px] flex-1 gap-2 bg-blue-600 text-white hover:bg-blue-700">
               <Search className="h-4 w-4" /> Search
             </Button>
-            <Button type="button" variant="outline" className="h-[38px]" onClick={() => search(NO_FILTERS)}>Clear</Button>
+            <Button type="button" variant="outline" className="h-[38px]" onClick={() => { setName(''); filterBy(NO_FILTERS) }}>Clear</Button>
           </div>
         </form>
       </section>
@@ -198,7 +198,7 @@ export default function ScreeningQueue({ rows, sectors }: { rows: ScreeningRow[]
           <h2 className="text-lg font-bold text-slate-900">Applications List</h2>
           <p className="text-xs text-slate-500">
             Showing {shown.length} of {rows.length}.{' '}
-            {applied.sector ? 'Tick applicants to send them to Admin as one batch.' : 'Search a Sector to tick applicants and send them as a batch.'}
+            {applied.sector ? 'Tick applicants to send them to Admin as one batch.' : 'Pick a Sector to tick applicants and send them as a batch.'}
           </p>
         </div>
 
