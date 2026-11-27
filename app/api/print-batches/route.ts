@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStaffSession, logPrintEvent } from '@/lib/print-batches-server'
 import { canSendBatches, BATCHABLE_STATUSES } from '@/lib/print-batches'
-import { makeGroupKey, normalizeSectorName } from '@/lib/sectors'
+import { makeGroupKey, normalizeSectorName, sectorCommandName } from '@/lib/sectors'
 import { sendSms } from '@/lib/termii'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -58,13 +58,13 @@ export async function POST(req: NextRequest) {
   }
 
   // Display spelling: the most common normalised form among the selection.
-  const pick = (vals: (string | null)[]) => {
+  const pick = (vals: (string | null)[], tidy: (v: string | null) => string) => {
     const counts = new Map<string, number>()
-    for (const v of vals) { const n = normalizeSectorName(v); if (n) counts.set(n, (counts.get(n) ?? 0) + 1) }
+    for (const v of vals) { const n = tidy(v); if (n) counts.set(n, (counts.get(n) ?? 0) + 1) }
     return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? ''
   }
-  const sectorCommand = pick(apps.map((a) => a.sector_command))
-  const subSector = pick(apps.map((a) => a.sub_sector))
+  const sectorCommand = pick(apps.map((a) => a.sector_command), sectorCommandName)
+  const subSector = pick(apps.map((a) => a.sub_sector), normalizeSectorName)
 
   const { data: batch, error: batchErr } = await service
     .from('print_batches')

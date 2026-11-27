@@ -41,6 +41,33 @@ export function sectorKey(input: string | null | undefined): string {
     .trim()
 }
 
+// Sector commands that applicants type several ways, as confirmed by the
+// project owner. Keys and values are sectorKey() output. This only affects how
+// records are grouped, filtered and labelled — stored text is never rewritten.
+const SECTOR_COMMAND_ALIASES: Record<string, string> = {
+  '01': '1', '01 gwagwalada': '1',
+  '02': '2', '2 gwako': '2', gwako: '2',
+  '3 kuje': '3',
+  'bwari 9': '9', bwari: '9',
+}
+const SECTOR_COMMAND_LABELS: Record<string, string> = {
+  '1': 'Sector 01 (Gwagwalada)',
+  '2': 'Sector 2 (Gwako)',
+  '3': 'Sector 3 (Kuje)',
+  '9': 'Sector 9 (Bwari)',
+}
+
+/** Grouping key for a Sector Command, with the known variants folded together. */
+export function sectorCommandKey(input: string | null | undefined): string {
+  const key = sectorKey(input)
+  return SECTOR_COMMAND_ALIASES[key] ?? key
+}
+
+/** Display name for a Sector Command. */
+export function sectorCommandName(input: string | null | undefined): string {
+  return SECTOR_COMMAND_LABELS[sectorCommandKey(input)] ?? normalizeSectorName(input)
+}
+
 export interface SectorRow {
   id: string
   sector_command: string | null
@@ -62,7 +89,7 @@ function mostCommon(values: string[]): string {
 }
 
 export function makeGroupKey(sector: string | null | undefined, sub: string | null | undefined): string {
-  return `${sectorKey(sector)}|${sectorKey(sub)}`
+  return `${sectorCommandKey(sector)}|${sectorKey(sub)}`
 }
 
 /** Group rows by (sector, sub sector), merging spelling variants. */
@@ -79,7 +106,7 @@ export function groupBySector<T extends SectorRow>(rows: T[]): SectorGroup<T>[] 
     const [sc, ss] = groupKey.split('|')
     groups.push({
       groupKey,
-      sectorCommand: mostCommon(list.map((r) => normalizeSectorName(r.sector_command)).filter(Boolean)) || 'Unassigned',
+      sectorCommand: mostCommon(list.map((r) => sectorCommandName(r.sector_command)).filter(Boolean)) || 'Unassigned',
       subSector: mostCommon(list.map((r) => normalizeSectorName(r.sub_sector)).filter(Boolean)) || 'Unassigned',
       assigned: !!sc && !!ss,
       rows: list,

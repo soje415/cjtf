@@ -1,9 +1,11 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { LinkButton } from '@/components/ui/link-button'
-import { Application, STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
+import ScreeningQueue, { ScreeningRow } from '@/components/dashboards/ScreeningQueue'
+import { buildSectorOptions, SectorPair } from '@/lib/sector-options'
+import { fetchAllRows } from '@/lib/fetch-all'
+import { Application } from '@/lib/types'
 
 export default async function IntDashboard() {
   const supabase = createClient()
@@ -15,13 +17,29 @@ export default async function IntDashboard() {
   const { data: profile } = await service.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'int') redirect('/auth/login')
 
-  const { data: apps } = await service
-    .from('applications')
-    .select('*, profiles!applications_applicant_id_fkey(full_name)')
-    .eq('status', 'PENDING_INT_SCREENING')
-    .order('ict_verified_at', { ascending: true })
+  const apps = await fetchAllRows<Application>((from, to) =>
+    service
+      .from('applications')
+      .select('*')
+      .eq('status', 'PENDING_INT_SCREENING')
+      .order('ict_verified_at', { ascending: true })
+      .order('id')
+      .range(from, to)
+  )
+  const everyone = await fetchAllRows<SectorPair>((from, to) =>
+    service.from('applications').select('sector_command, sub_sector').order('id').range(from, to)
+  )
 
-  const list = apps as Application[] ?? []
+  const list = apps
+  const sectors = buildSectorOptions(everyone, list)
+  const rows: ScreeningRow[] = list.map((a) => ({
+    id: a.id,
+    name: `${a.first_name} ${a.last_name}`.trim(),
+    address: a.residential_address,
+    sectorCommand: a.sector_command,
+    subSector: a.sub_sector,
+    verifiedOn: a.ict_verified_at ? new Date(a.ict_verified_at).toLocaleDateString('en-NG') : '—',
+  }))
 
   const { data: officeRows } = await service
     .from('office_registrations')
@@ -47,53 +65,7 @@ export default async function IntDashboard() {
         </Card>
       </div>
 
-      {list.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="py-10 text-center text-gray-500">No applications pending screening.</CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader><CardTitle className="text-base">Applications for Screening</CardTitle></CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-gray-500 text-xs uppercase">
-                    <th className="text-left pb-2 pr-4">Name</th>
-                    <th className="text-left pb-2 pr-4">Address</th>
-                    <th className="text-left pb-2 pr-4">Sector Command</th>
-                    <th className="text-left pb-2 pr-4">Sub Sector</th>
-                    <th className="text-left pb-2 pr-4">Status</th>
-                    <th className="text-left pb-2 pr-4">ICT Verified</th>
-                    <th className="text-left pb-2">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {list.map((app) => (
-                    <tr key={app.id} className="border-b last:border-0 hover:bg-gray-50">
-                      <td className="py-2 pr-4 font-medium">{app.first_name} {app.last_name}</td>
-                      <td className="py-2 pr-4 text-gray-600">{app.residential_address || '—'}</td>
-                      <td className="py-2 pr-4 text-gray-600">{app.sector_command || '—'}</td>
-                      <td className="py-2 pr-4 text-gray-600">{app.sub_sector || '—'}</td>
-                      <td className="py-2 pr-4">
-                        <Badge className={STATUS_COLORS[app.status]}>{STATUS_LABELS[app.status]}</Badge>
-                      </td>
-                      <td className="py-2 pr-4 text-gray-500">
-                        {app.ict_verified_at ? new Date(app.ict_verified_at).toLocaleDateString('en-NG') : '—'}
-                      </td>
-                      <td className="py-2">
-                        <LinkButton href={`/portal/int/application/${app.id}`} size="sm" variant="outline" className="text-xs border-purple-600 text-purple-700 hover:bg-purple-50">
-                          Screen Application
-                        </LinkButton>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <ScreeningQueue rows={rows} sectors={sectors} />
 
       {/* Office Registration requests for screening */}
       <Card>

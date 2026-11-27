@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { normalizeSectorName, sectorKey } from '@/lib/sectors'
+import SectorSelects from '@/components/dashboards/SectorSelects'
+import type { SectorOption } from '@/lib/sector-options'
 
 export interface QueueRow {
   id: string
@@ -27,7 +29,7 @@ export interface QueueGroup {
 
 const ALL = ''
 
-export default function PrintQueueClient({ groups, role }: { groups: QueueGroup[]; role: 'int' | 'admin' }) {
+export default function PrintQueueClient({ groups, sectors, role }: { groups: QueueGroup[]; sectors: SectorOption[]; role: 'int' | 'admin' }) {
   const router = useRouter()
   // selected ids per group
   const [selected, setSelected] = useState<Record<string, Set<string>>>({})
@@ -41,24 +43,13 @@ export default function PrintQueueClient({ groups, role }: { groups: QueueGroup[
   const [unit, setUnit] = useState(ALL)
   const [search, setSearch] = useState('')
 
-  const sectorOptions = useMemo(
-    () => [...new Set(groups.map((g) => g.sectorCommand))].sort((a, b) => a.localeCompare(b)),
-    [groups]
-  )
-  // Sub sectors narrow to the chosen sector.
-  const subOptions = useMemo(
-    () =>
-      [...new Set(groups.filter((g) => !sector || g.sectorCommand === sector).map((g) => g.subSector))].sort((a, b) =>
-        a.localeCompare(b)
-      ),
-    [groups, sector]
-  )
   // Units narrow to the chosen sector / sub sector. Spelling variants merge by key.
   const unitOptions = useMemo(() => {
     const m = new Map<string, string>()
     for (const g of groups) {
-      if (sector && g.sectorCommand !== sector) continue
-      if (sub && g.subSector !== sub) continue
+      const [sectorPart, subPart] = g.groupKey.split('|')
+      if (sector && sectorPart !== sector) continue
+      if (sub && subPart !== sub) continue
       for (const r of g.rows) {
         const k = sectorKey(r.unit)
         if (k && !m.has(k)) m.set(k, normalizeSectorName(r.unit))
@@ -72,8 +63,9 @@ export default function PrintQueueClient({ groups, role }: { groups: QueueGroup[
     const q = search.trim().toLowerCase()
     const out: QueueGroup[] = []
     for (const g of groups) {
-      if (sector && g.sectorCommand !== sector) continue
-      if (sub && g.subSector !== sub) continue
+      const [sectorPart, subPart] = g.groupKey.split('|')
+      if (sector && sectorPart !== sector) continue
+      if (sub && subPart !== sub) continue
       const rows = g.rows.filter((r) => {
         if (unit && sectorKey(r.unit) !== unit) return false
         if (q && !r.name.toLowerCase().includes(q) && !(r.cjtfId ?? '').toLowerCase().includes(q)) return false
@@ -148,16 +140,6 @@ export default function PrintQueueClient({ groups, role }: { groups: QueueGroup[
     setSending(null)
   }
 
-  if (groups.length === 0) {
-    return (
-      <Card>
-        <CardContent className="py-10 text-center text-sm text-gray-500">
-          No approved applicants are waiting to be batched.
-        </CardContent>
-      </Card>
-    )
-  }
-
   const selectCls = 'border rounded px-3 py-1.5 text-sm bg-white min-w-[160px]'
 
   return (
@@ -166,24 +148,11 @@ export default function PrintQueueClient({ groups, role }: { groups: QueueGroup[
       <Card>
         <CardContent className="pt-4">
           <div className="flex flex-wrap items-end gap-3">
-            <label className="text-xs text-gray-500 space-y-1">
-              <span className="block">Sector Command</span>
-              <select
-                className={selectCls}
-                value={sector}
-                onChange={(e) => { setSector(e.target.value); setSub(ALL); setUnit(ALL) }}
-              >
-                <option value={ALL}>All sectors</option>
-                {sectorOptions.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </label>
-            <label className="text-xs text-gray-500 space-y-1">
-              <span className="block">Sub Sector</span>
-              <select className={selectCls} value={sub} onChange={(e) => { setSub(e.target.value); setUnit(ALL) }}>
-                <option value={ALL}>All sub sectors</option>
-                {subOptions.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </label>
+            <SectorSelects
+              options={sectors} sector={sector} sub={sub} countLabel="ready"
+              onSector={(k) => { setSector(k); setSub(ALL); setUnit(ALL) }}
+              onSub={(k) => { setSub(k); setUnit(ALL) }}
+            />
             <label className="text-xs text-gray-500 space-y-1">
               <span className="block">Unit</span>
               <select className={selectCls} value={unit} onChange={(e) => setUnit(e.target.value)}>
@@ -213,7 +182,9 @@ export default function PrintQueueClient({ groups, role }: { groups: QueueGroup[
 
       {filtered.length === 0 && (
         <Card>
-          <CardContent className="py-10 text-center text-sm text-gray-500">No applicants match these filters.</CardContent>
+          <CardContent className="py-10 text-center text-sm text-gray-500">
+            {groups.length === 0 ? 'No approved applicants are waiting to be batched.' : 'No approved applicants are ready under these filters.'}
+          </CardContent>
         </Card>
       )}
 

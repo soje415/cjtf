@@ -4,6 +4,8 @@ import { LinkButton } from '@/components/ui/link-button'
 import { groupBySector } from '@/lib/sectors'
 import { canSendBatches, BATCHABLE_STATUSES } from '@/lib/print-batches'
 import PrintQueueClient, { QueueGroup } from '@/components/dashboards/PrintQueueClient'
+import { buildSectorOptions, SectorPair } from '@/lib/sector-options'
+import { fetchAllRows } from '@/lib/fetch-all'
 
 // Shared by /portal/int/print-queue and /portal/admin/print-queue.
 export default async function PrintQueuePage({ role }: { role: 'int' | 'admin' }) {
@@ -33,6 +35,10 @@ export default async function PrintQueuePage({ role }: { role: 'int' | 'admin' }
   }
 
   const rows = data ?? []
+  const everyone = await fetchAllRows<SectorPair>((from, to) =>
+    service.from('applications').select('sector_command, sub_sector').order('id').range(from, to)
+  )
+  const sectors = buildSectorOptions(everyone, rows)
   const groups: QueueGroup[] = groupBySector(rows).map((g) => ({
     groupKey: g.groupKey,
     sectorCommand: g.sectorCommand,
@@ -74,7 +80,7 @@ export default async function PrintQueuePage({ role }: { role: 'int' | 'admin' }
           Showing the first {rows.length} of {count} waiting applicants. Send these, then refresh for the rest.
         </p>
       )}
-      <PrintQueueClient groups={groups} role={role} />
+      <PrintQueueClient groups={groups} sectors={sectors} role={role} />
     </div>
   )
 }
