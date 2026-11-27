@@ -41,3 +41,9 @@ export function rankForCard(rank: string | null | undefined): string {
   const trimmed = (rank ?? '').trim()
   return trimmed ? trimmed.toUpperCase() : RANK_FALLBACK
 }
+
+// Existing (legacy) members already hold a rank, recorded on their application.
+// Screening carries that rank forward; only people without one need a new rank.
+export function heldRank(app: { membership_type: string; self_reported_rank: string | null }): CjtfRank | null {
+  return app.membership_type === 'legacy' && isValidRank(app.self_reported_rank) ? app.self_reported_rank : null
+}

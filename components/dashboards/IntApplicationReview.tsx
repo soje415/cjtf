@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { STATUS_LABELS, STATUS_COLORS } from '@/lib/types'
-import { CJTF_RANKS, DEFAULT_RECOMMENDED_RANK, type CjtfRank } from '@/lib/ranks'
+import { CJTF_RANKS, DEFAULT_RECOMMENDED_RANK, heldRank, type CjtfRank } from '@/lib/ranks'
 import { toast } from 'sonner'
 import ApplicantDetailsEditor from './ApplicantDetailsEditor'
 import DocumentWaivers from './DocumentWaivers'
@@ -27,7 +27,7 @@ export default function IntApplicationReview({ application, notes }: Props) {
   const router = useRouter()
   const [note, setNote] = useState('')
   const [rank, setRank] = useState<CjtfRank>(
-    (application.recommended_rank as CjtfRank | null) ?? DEFAULT_RECOMMENDED_RANK
+    (application.recommended_rank as CjtfRank | null) ?? heldRank(application) ?? DEFAULT_RECOMMENDED_RANK
   )
   const [loading, setLoading] = useState<'clear' | 'reject' | null>(null)
 
