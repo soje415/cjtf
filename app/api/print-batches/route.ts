@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getStaffSession, logPrintEvent } from '@/lib/print-batches-server'
 import { canSendBatches, BATCHABLE_STATUSES } from '@/lib/print-batches'
-import { makeGroupKey, normalizeSectorName, sectorCommandName } from '@/lib/sectors'
+import { makeGroupKey, sectorCommandName, subSectorName } from '@/lib/sectors'
 import { sendSms } from '@/lib/termii'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? ''
   }
   const sectorCommand = pick(apps.map((a) => a.sector_command), sectorCommandName)
-  const subSector = pick(apps.map((a) => a.sub_sector), normalizeSectorName)
+  const subSector = subSectorName(apps[0].sector_command, apps[0].sub_sector)
 
   const { data: batch, error: batchErr } = await service
     .from('print_batches')

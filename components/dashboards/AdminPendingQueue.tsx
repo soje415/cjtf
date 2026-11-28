@@ -9,7 +9,7 @@ import { LinkButton } from '@/components/ui/link-button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import SectorSelects from '@/components/dashboards/SectorSelects'
 import type { SectorOption } from '@/lib/sector-options'
-import { sectorCommandKey, sectorKey } from '@/lib/sectors'
+import { sectorCommandKey, subSectorKey, subSectorName } from '@/lib/sectors'
 import { CJTF_RANKS } from '@/lib/ranks'
 import { STATUS_LABELS, STATUS_COLORS, MEMBERSHIP_TYPE_LABELS, MEMBERSHIP_TYPE_COLORS, ApplicationStatus, MembershipType } from '@/lib/types'
 
@@ -52,7 +52,7 @@ export default function AdminPendingQueue({ rows, sectors, batches }: { rows: Pe
       rows.filter((r) => {
         if (batch && r.batchKey !== batch) return false
         if (sector && sectorCommandKey(r.sectorCommand) !== sector) return false
-        return !sub || sectorKey(r.subSector) === sub
+        return !sub || subSectorKey(r.sectorCommand, r.subSector) === sub
       }),
     [rows, sector, sub, batch]
   )
@@ -222,7 +222,7 @@ export default function AdminPendingQueue({ rows, sectors, batches }: { rows: Pe
                     )}
                     <td className="py-2 pr-4 text-gray-600">{r.address || '—'}</td>
                     <td className="py-2 pr-4 text-gray-600">{r.sectorCommand || '—'}</td>
-                    <td className="py-2 pr-4 text-gray-600">{r.subSector || '—'}</td>
+                    <td className="py-2 pr-4 text-gray-600">{subSectorName(r.sectorCommand, r.subSector) || '—'}</td>
                     <td className="py-2 pr-4 text-gray-600">{r.recommendedRank || '—'}</td>
                     <td className="py-2 pr-4">
                       <div className="flex gap-1.5 flex-wrap">

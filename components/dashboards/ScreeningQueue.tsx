@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import type { SectorOption } from '@/lib/sector-options'
 import { CJTF_RANKS, DEFAULT_RECOMMENDED_RANK } from '@/lib/ranks'
-import { normalizeSectorName, sectorCommandKey, sectorCommandName, sectorKey } from '@/lib/sectors'
+import { normalizeSectorName, sectorCommandKey, sectorCommandName, sectorKey, subSectorKey, subSectorName } from '@/lib/sectors'
 
 const MAX_BATCH = 200
 
@@ -59,7 +59,7 @@ export default function ScreeningQueue({ rows, sectors }: { rows: ScreeningRow[]
         rows.filter(
           (r) =>
             (!applied.sector || sectorCommandKey(r.sectorCommand) === applied.sector) &&
-            (!applied.sub || sectorKey(r.subSector) === applied.sub)
+            (!applied.sub || subSectorKey(r.sectorCommand, r.subSector) === applied.sub)
         ),
         (r) => sectorKey(r.unit),
         (r) => normalizeSectorName(r.unit)
@@ -73,7 +73,7 @@ export default function ScreeningQueue({ rows, sectors }: { rows: ScreeningRow[]
       (r) =>
         (!applied.state || stateKey(r.state) === applied.state) &&
         (!applied.sector || sectorCommandKey(r.sectorCommand) === applied.sector) &&
-        (!applied.sub || sectorKey(r.subSector) === applied.sub) &&
+        (!applied.sub || subSectorKey(r.sectorCommand, r.subSector) === applied.sub) &&
         (!applied.unit || sectorKey(r.unit) === applied.unit) &&
         (!q || r.name.toLowerCase().includes(q))
     )
@@ -272,7 +272,7 @@ export default function ScreeningQueue({ rows, sectors }: { rows: ScreeningRow[]
                       <td className={`${td} font-medium text-slate-900`}>{r.name}</td>
                       <td className={td}>{r.state || '—'}</td>
                       <td className={td}>{sectorCommandName(r.sectorCommand) || '—'}</td>
-                      <td className={td}>{normalizeSectorName(r.subSector) || '—'}</td>
+                      <td className={td}>{subSectorName(r.sectorCommand, r.subSector) || '—'}</td>
                       <td className={td}>{normalizeSectorName(r.unit) || '—'}</td>
                       <td className={td}>
                         {selected.has(r.id) && applied.sector ? (

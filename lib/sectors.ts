@@ -68,6 +68,41 @@ export function sectorCommandName(input: string | null | undefined): string {
   return SECTOR_COMMAND_LABELS[sectorCommandKey(input)] ?? normalizeSectorName(input)
 }
 
+// Sub sectors that are spelled several ways inside one Sector Command (typos and
+// short forms). Best-guess grouping requested by the project owner. Outer keys are
+// sectorCommandKey() output, inner keys and values are sectorKey() output.
+const SUB_SECTOR_ALIASES: Record<string, Record<string, string>> = {
+  '2': { tungamaje: 'tungan maje' },
+  '7': {
+    dabana: 'dagbana',
+    'gildan mangoro': 'gidan mangoro',
+    jikwoi: 'jikwoyi',
+    kurud: 'kurudu',
+    karachi: 'karshi',
+  },
+  '9': {
+    'dutse alhaji': 'dutse',
+    f01: 'f01 kubwa',
+    fo1: 'f01 kubwa',
+    'kubwa f01': 'f01 kubwa',
+    'kuduru sub secto': 'kuduru',
+  },
+  '10': { gidna: 'guidna' },
+}
+const SUB_SECTOR_LABELS: Record<string, string> = { provost: 'Provost Command' }
+
+/** Grouping key for a Sub Sector within its Sector Command. */
+export function subSectorKey(sector: string | null | undefined, sub: string | null | undefined): string {
+  const key = sectorKey(sub)
+  return SUB_SECTOR_ALIASES[sectorCommandKey(sector)]?.[key] ?? key
+}
+
+/** Display name for a Sub Sector: one tidy spelling per group, '' when empty. */
+export function subSectorName(sector: string | null | undefined, sub: string | null | undefined): string {
+  const key = subSectorKey(sector, sub)
+  return SUB_SECTOR_LABELS[key] ?? key.replace(/(^| )[a-z]/g, (c) => c.toUpperCase())
+}
+
 export interface SectorRow {
   id: string
   sector_command: string | null
@@ -89,7 +124,7 @@ function mostCommon(values: string[]): string {
 }
 
 export function makeGroupKey(sector: string | null | undefined, sub: string | null | undefined): string {
-  return `${sectorCommandKey(sector)}|${sectorKey(sub)}`
+  return `${sectorCommandKey(sector)}|${subSectorKey(sector, sub)}`
 }
 
 /** Group rows by (sector, sub sector), merging spelling variants. */
@@ -107,7 +142,7 @@ export function groupBySector<T extends SectorRow>(rows: T[]): SectorGroup<T>[] 
     groups.push({
       groupKey,
       sectorCommand: mostCommon(list.map((r) => sectorCommandName(r.sector_command)).filter(Boolean)) || 'Unassigned',
-      subSector: mostCommon(list.map((r) => normalizeSectorName(r.sub_sector)).filter(Boolean)) || 'Unassigned',
+      subSector: subSectorName(list[0].sector_command, list[0].sub_sector) || 'Unassigned',
       assigned: !!sc && !!ss,
       rows: list,
     })

@@ -8,7 +8,7 @@ import { LinkButton } from '@/components/ui/link-button'
 import { toast } from 'sonner'
 import SectorSelects from '@/components/dashboards/SectorSelects'
 import type { SectorOption } from '@/lib/sector-options'
-import { sectorCommandKey, sectorKey } from '@/lib/sectors'
+import { sectorCommandKey, subSectorKey, subSectorName } from '@/lib/sectors'
 
 const MAX_BATCH = 200
 
@@ -32,7 +32,7 @@ export default function TrainingQueueTable({ rows, sectors }: { rows: TrainingRo
     () =>
       rows.filter((r) => {
         if (sector && sectorCommandKey(r.sectorCommand) !== sector) return false
-        return !sub || sectorKey(r.subSector) === sub
+        return !sub || subSectorKey(r.sectorCommand, r.subSector) === sub
       }),
     [rows, sector, sub]
   )
@@ -137,7 +137,7 @@ export default function TrainingQueueTable({ rows, sectors }: { rows: TrainingRo
                       </td>
                       <td className="py-2 pr-4 font-medium">{r.name}</td>
                       <td className="py-2 pr-4 text-gray-600">{r.sectorCommand || '—'}</td>
-                      <td className="py-2 pr-4 text-gray-600">{r.subSector || '—'}</td>
+                      <td className="py-2 pr-4 text-gray-600">{subSectorName(r.sectorCommand, r.subSector) || '—'}</td>
                       <td className="py-2 pr-4 text-gray-600">{r.rank || '—'}</td>
                       <td className="py-2 pr-4 text-gray-500">{r.approvedOn}</td>
                       <td className="py-2">

@@ -1,6 +1,6 @@
 // Dropdown options for the Sector Command → Sub Sector filters: EVERY sector on
 // record, each with how many rows of the current queue sit in it (may be 0).
-import { normalizeSectorName, sectorCommandKey, sectorCommandName, sectorKey } from '@/lib/sectors'
+import { sectorCommandKey, sectorCommandName, subSectorKey, subSectorName } from '@/lib/sectors'
 
 export interface SectorPair {
   sector_command: string | null
@@ -23,12 +23,12 @@ export function buildSectorOptions(everyone: SectorPair[], queue: SectorPair[]):
     sector.count += queued
     const sName = sectorCommandName(row.sector_command)
     sector.names.set(sName, (sector.names.get(sName) ?? 0) + seen)
-    const uk = sectorKey(row.sub_sector)
+    const uk = subSectorKey(row.sector_command, row.sub_sector)
     if (!uk) return
     const sub = sector.subs.get(uk) ?? { names: new Map(), count: 0 }
     sector.subs.set(uk, sub)
     sub.count += queued
-    const uName = normalizeSectorName(row.sub_sector)
+    const uName = subSectorName(row.sector_command, row.sub_sector)
     sub.names.set(uName, (sub.names.get(uName) ?? 0) + seen)
   }
   for (const row of everyone) add(row, 0, 1)

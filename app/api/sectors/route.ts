@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { normalizeSectorName, sectorKey } from '@/lib/sectors'
+import { normalizeSectorName, sectorKey, subSectorKey, subSectorName } from '@/lib/sectors'
 
 // GET: suggestions for the Sector Command / Sub Sector inputs — the distinct,
 // tidied values already in use, so new applicants pick an existing spelling
@@ -31,11 +31,11 @@ export async function GET() {
   const subsBySector = new Map<string, Map<string, Map<string, number>>>()
   for (const r of data ?? []) {
     const sk = sectorKey(r.sector_command)
-    const uk = sectorKey(r.sub_sector)
+    const uk = subSectorKey(r.sector_command, r.sub_sector)
     if (!sk || !uk) continue
     tally(sectors, sk, normalizeSectorName(r.sector_command))
     const subs = subsBySector.get(sk) ?? new Map<string, Map<string, number>>()
-    tally(subs, uk, normalizeSectorName(r.sub_sector))
+    tally(subs, uk, subSectorName(r.sector_command, r.sub_sector))
     subsBySector.set(sk, subs)
   }
 
