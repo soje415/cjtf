@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { UserPlus } from 'lucide-react'
+import { Panel } from '@/components/dashboards/StaffUI'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 
@@ -38,15 +39,16 @@ export default function CreateExecutiveForm() {
     'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-cjtf-blue'
 
   return (
-    <Card>
-      <CardHeader className="pb-2 flex flex-row items-center justify-between">
-        <CardTitle className="text-base">Executive / DSS Accounts</CardTitle>
+    <Panel
+      title="Executive / DSS Accounts" icon={UserPlus} bodyClassName={open ? 'p-5' : ''}
+      aside={
         <Button size="sm" variant="outline" onClick={() => setOpen((o) => !o)}>
           {open ? 'Cancel' : '+ New Executive Account'}
         </Button>
-      </CardHeader>
+      }
+    >
       {open && (
-        <CardContent>
+        <div>
           <p className="text-xs text-gray-500 mb-4">
             Creates a read-only oversight account with full visibility of the recruitment pipeline.
             Every record they view is logged.
@@ -73,13 +75,13 @@ export default function CreateExecutiveForm() {
                 onChange={(e) => set('password', e.target.value)} placeholder="Share securely" />
             </div>
             <div className="sm:col-span-2">
-              <Button type="submit" disabled={loading} className="bg-cjtf-blue hover:bg-cjtf-blue-dark">
+              <Button type="submit" disabled={loading} className="bg-blue-600 text-white hover:bg-blue-700">
                 {loading ? 'Creating…' : 'Create Executive Account'}
               </Button>
             </div>
           </form>
-        </CardContent>
+        </div>
       )}
-    </Card>
+    </Panel>
   )
 }

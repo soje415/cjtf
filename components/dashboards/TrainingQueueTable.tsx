@@ -2,13 +2,14 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import Link from 'next/link'
+import { GraduationCap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { LinkButton } from '@/components/ui/link-button'
+import { Empty, Panel, headRow, rowButton, table, td, th, tr } from '@/components/dashboards/StaffUI'
 import { toast } from 'sonner'
 import SectorSelects from '@/components/dashboards/SectorSelects'
 import type { SectorOption } from '@/lib/sector-options'
-import { sectorCommandKey, subSectorKey, subSectorName } from '@/lib/sectors'
+import { sectorCommandKey, sectorCommandName, subSectorKey, subSectorName } from '@/lib/sectors'
 
 const MAX_BATCH = 200
 
@@ -23,8 +24,12 @@ export interface TrainingRow {
 
 export default function TrainingQueueTable({ rows, sectors }: { rows: TrainingRow[]; sectors: SectorOption[] }) {
   const router = useRouter()
-  const [sector, setSector] = useState('')
-  const [sub, setSub] = useState('')
+  const [pickedSector, setSector] = useState('')
+  const [pickedSub, setSub] = useState('')
+  // A choice stops applying once nobody is left under it.
+  const current = sectors.find((s) => s.key === pickedSector)
+  const sector = current ? pickedSector : ''
+  const sub = current?.subs.some((s) => s.key === pickedSub) ? pickedSub : ''
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [sending, setSending] = useState(false)
 
@@ -74,90 +79,80 @@ export default function TrainingQueueTable({ rows, sectors }: { rows: TrainingRo
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <CardTitle className="text-base">Pending Training Completion</CardTitle>
-          <LinkButton href="/portal/admin/print-queue" size="sm" variant="outline" className="text-xs border-cjtf-green text-cjtf-green hover:bg-cjtf-green-light">
-            Open print queue →
-          </LinkButton>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {rows.length === 0 ? (
-          <p className="py-4 text-center text-sm text-gray-500">Nobody is waiting for training confirmation.</p>
-        ) : (
-          <>
-            <div className="flex flex-wrap items-end gap-3">
-              <SectorSelects
-                options={sectors} sector={sector} sub={sub} countLabel="in training"
-                onSector={(k) => { setSector(k); setSub(''); setSelected(new Set()) }}
-                onSub={(k) => { setSub(k); setSelected(new Set()) }}
-              />
-              {chosen.length > 0 && (
-                <Button
-                  onClick={() => { if (confirm(`Confirm training completed for ${chosen.length} applicant(s)?`)) confirmTraining(chosen.map((r) => r.id)) }}
-                  disabled={sending}
-                  className="bg-indigo-600 hover:bg-indigo-700"
-                >
-                  {sending ? 'Confirming…' : `Confirm training for ${chosen.length}`}
-                </Button>
-              )}
-            </div>
-            <p className="text-xs text-gray-500">
-              Showing {shown.length} of {rows.length}.{' '}
-              {sector ? 'Tick applicants to confirm them together.' : 'Pick a Sector Command to confirm several at once.'}
-              {sector && shown.length > MAX_BATCH && ` “Select all” picks the first ${MAX_BATCH}.`}
-            </p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-gray-500 text-xs uppercase">
-                    <th className="w-8 pb-2 pr-2 text-left">
-                      {sector && (
-                        <input
-                          type="checkbox" aria-label="Select all shown applicants" checked={allChosen}
-                          onChange={() => setSelected(allChosen ? new Set() : new Set(selectable.map((r) => r.id)))}
-                        />
-                      )}
-                    </th>
-                    <th className="text-left pb-2 pr-4">Name</th>
-                    <th className="text-left pb-2 pr-4">Sector Command</th>
-                    <th className="text-left pb-2 pr-4">Sub Sector</th>
-                    <th className="text-left pb-2 pr-4">Rank</th>
-                    <th className="text-left pb-2 pr-4">Cleared</th>
-                    <th className="text-left pb-2">Action</th>
+    <Panel
+      title="Pending Training Completion" icon={GraduationCap}
+      aside={<Link href="/portal/admin/print-queue" className="font-semibold text-blue-700 hover:underline">Open print queue →</Link>}
+    >
+      {rows.length === 0 ? (
+        <Empty>Nobody is waiting for training confirmation.</Empty>
+      ) : (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-end gap-3 p-2">
+            <SectorSelects
+              options={sectors} sector={sector} sub={sub} countLabel="in training"
+              onSector={(k) => { setSector(k); setSub(''); setSelected(new Set()) }}
+              onSub={(k) => { setSub(k); setSelected(new Set()) }}
+            />
+            {chosen.length > 0 && (
+              <Button
+                onClick={() => { if (confirm(`Confirm training completed for ${chosen.length} applicant(s)?`)) confirmTraining(chosen.map((r) => r.id)) }}
+                disabled={sending}
+                className="h-[38px] bg-green-600 text-white hover:bg-green-700"
+              >
+                {sending ? 'Confirming…' : `Confirm training for ${chosen.length}`}
+              </Button>
+            )}
+          </div>
+          <p className="px-2 text-xs text-slate-500">
+            Showing {shown.length} of {rows.length}.{' '}
+            {sector ? 'Tick applicants to confirm them together.' : 'Pick a Sector to confirm several at once.'}
+            {sector && shown.length > MAX_BATCH && ` “Select all” picks the first ${MAX_BATCH}.`}
+          </p>
+          <div className="overflow-x-auto">
+            <table className={table}>
+              <thead>
+                <tr className={headRow}>
+                  <th className={`${th} w-8`}>
+                    {sector && (
+                      <input
+                        type="checkbox" aria-label="Select all shown applicants" checked={allChosen}
+                        onChange={() => setSelected(allChosen ? new Set() : new Set(selectable.map((r) => r.id)))}
+                      />
+                    )}
+                  </th>
+                  <th className={th}>S/N</th>
+                  <th className={th}>Name</th>
+                  <th className={th}>Sector</th>
+                  <th className={th}>Sub-Sector</th>
+                  <th className={th}>Rank</th>
+                  <th className={th}>Approved</th>
+                  <th className={th}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shown.map((r, i) => (
+                  <tr key={r.id} className={tr}>
+                    <td className={td}>
+                      <input type="checkbox" disabled={!sector} checked={selected.has(r.id)} onChange={() => toggle(r.id)} aria-label={`Select ${r.name}`} />
+                    </td>
+                    <td className={`${td} text-slate-500`}>{i + 1}</td>
+                    <td className={`${td} font-semibold text-slate-900`}>{r.name}</td>
+                    <td className={td}>{sectorCommandName(r.sectorCommand) || '—'}</td>
+                    <td className={td}>{subSectorName(r.sectorCommand, r.subSector) || '—'}</td>
+                    <td className={td}>{r.rank || '—'}</td>
+                    <td className={`${td} whitespace-nowrap`}>{r.approvedOn}</td>
+                    <td className={td}>
+                      <button type="button" onClick={() => confirmTraining([r.id])} disabled={sending} className={rowButton}>
+                        Confirm
+                      </button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {shown.map((r) => (
-                    <tr key={r.id} className="border-b last:border-0 hover:bg-gray-50">
-                      <td className="py-2 pr-2">
-                        <input type="checkbox" disabled={!sector} checked={selected.has(r.id)} onChange={() => toggle(r.id)} aria-label={`Select ${r.name}`} />
-                      </td>
-                      <td className="py-2 pr-4 font-medium">{r.name}</td>
-                      <td className="py-2 pr-4 text-gray-600">{r.sectorCommand || '—'}</td>
-                      <td className="py-2 pr-4 text-gray-600">{subSectorName(r.sectorCommand, r.subSector) || '—'}</td>
-                      <td className="py-2 pr-4 text-gray-600">{r.rank || '—'}</td>
-                      <td className="py-2 pr-4 text-gray-500">{r.approvedOn}</td>
-                      <td className="py-2">
-                        <Button
-                          size="sm"
-                          onClick={() => confirmTraining([r.id])}
-                          disabled={sending}
-                          className="text-xs bg-indigo-600 hover:bg-indigo-700"
-                        >
-                          Confirm Training Completed
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </Panel>
   )
 }

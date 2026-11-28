@@ -65,7 +65,7 @@ export default async function PrintQueuePage({ role }: { role: 'int' | 'admin' }
               : 'Pick a group and send it straight to ICT, who generates each ID. Batches from INT are on the Print Batches page.'}
           </p>
         </div>
-        <LinkButton href="/portal/staff/print" variant="outline" className="border-cjtf-green text-cjtf-green hover:bg-cjtf-green-light">
+        <LinkButton href="/portal/staff/print" variant="outline" className="h-10 border-blue-600 px-4 text-blue-700 hover:bg-blue-50">
           Print batches →
         </LinkButton>
       </div>

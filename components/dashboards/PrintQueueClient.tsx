@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { normalizeSectorName, sectorKey } from '@/lib/sectors'
 import SectorSelects from '@/components/dashboards/SectorSelects'
+import { field, fieldLabel } from '@/components/dashboards/StaffUI'
 import type { SectorOption } from '@/lib/sector-options'
 
 export interface QueueRow {
@@ -140,8 +141,6 @@ export default function PrintQueueClient({ groups, sectors, role }: { groups: Qu
     setSending(null)
   }
 
-  const selectCls = 'border rounded px-3 py-1.5 text-sm bg-white min-w-[160px]'
-
   return (
     <div className="space-y-6">
       {/* Filter bar */}
@@ -153,22 +152,22 @@ export default function PrintQueueClient({ groups, sectors, role }: { groups: Qu
               onSector={(k) => { setSector(k); setSub(ALL); setUnit(ALL) }}
               onSub={(k) => { setSub(k); setUnit(ALL) }}
             />
-            <label className="text-xs text-gray-500 space-y-1">
+            <label className={`${fieldLabel} w-full sm:w-48`}>
               <span className="block">Unit</span>
-              <select className={selectCls} value={unit} onChange={(e) => setUnit(e.target.value)}>
+              <select className={field} value={unit} onChange={(e) => setUnit(e.target.value)}>
                 <option value={ALL}>All units</option>
                 {unitOptions.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
               </select>
             </label>
-            <label className="text-xs text-gray-500 space-y-1 flex-1 min-w-[180px]">
+            <label className={`${fieldLabel} flex-1 min-w-[180px]`}>
               <span className="block">Search name or CJTF ID</span>
               <input
                 type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…"
-                className="w-full border rounded px-3 py-1.5 text-sm"
+                className={field}
               />
             </label>
             {filtering && (
-              <Button variant="outline" size="sm" onClick={() => { setSector(ALL); setSub(ALL); setUnit(ALL); setSearch('') }}>
+              <Button variant="outline" className="h-[38px]" onClick={() => { setSector(ALL); setSub(ALL); setUnit(ALL); setSearch('') }}>
                 Clear filters
               </Button>
             )}
@@ -288,7 +287,7 @@ export default function PrintQueueClient({ groups, sectors, role }: { groups: Qu
                         <Button
                           onClick={() => send(g)}
                           disabled={selVisible === 0 || sending === g.groupKey}
-                          className="bg-cjtf-green hover:bg-cjtf-green-dark"
+                          className="bg-blue-600 text-white hover:bg-blue-700"
                         >
                           {sending === g.groupKey ? 'Sending…' : `Send ${selVisible} to ${role === 'int' ? 'Admin' : 'ICT'}`}
                         </Button>

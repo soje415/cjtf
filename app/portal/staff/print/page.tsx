@@ -1,7 +1,9 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Layers } from 'lucide-react'
+import { Empty, Panel, headRow, rowButton, table, td, th, tr } from '@/components/dashboards/StaffUI'
 import { LinkButton } from '@/components/ui/link-button'
 import { BATCH_STATUS_LABELS, BATCH_STATUS_COLORS, canViewBatches, canSendBatches, PrintBatch, BatchStatus } from '@/lib/print-batches'
 
@@ -60,7 +62,7 @@ export default async function PrintBatchesPage({ searchParams }: { searchParams:
           </p>
         </div>
         {canSendBatches(role) && (
-          <LinkButton href={queueHref} className="bg-cjtf-green hover:bg-cjtf-green-dark">Open print queue →</LinkButton>
+          <LinkButton href={queueHref} className="h-10 bg-blue-600 px-4 text-white hover:bg-blue-700">Open print queue →</LinkButton>
         )}
       </div>
 
@@ -71,57 +73,54 @@ export default async function PrintBatchesPage({ searchParams }: { searchParams:
             href={`/portal/staff/print?status=${f.value}`}
             size="sm"
             variant={filter === f.value ? 'default' : 'outline'}
-            className={filter === f.value ? 'bg-cjtf-green hover:bg-cjtf-green-dark' : ''}
+            className={`h-9 rounded-full px-4 ${filter === f.value ? 'bg-blue-600 text-white hover:bg-blue-700' : 'border-slate-300 bg-white text-slate-700'}`}
           >
             {f.label}
           </LinkButton>
         ))}
       </div>
 
-      <Card>
-        <CardHeader><CardTitle className="text-base">Batches</CardTitle></CardHeader>
-        <CardContent>
-          {batches.length === 0 ? (
-            <p className="py-6 text-center text-sm text-gray-500">No batches here.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-gray-500 text-xs uppercase">
-                    <th className="text-left pb-2 pr-4">Batch</th>
-                    <th className="text-left pb-2 pr-4">Sector / Sub Sector</th>
-                    <th className="text-left pb-2 pr-4">Applicants</th>
-                    <th className="text-left pb-2 pr-4">Sent by</th>
-                    <th className="text-left pb-2 pr-4">Status</th>
-                    <th className="text-left pb-2 pr-4">Created</th>
-                    <th className="text-left pb-2" />
+      <Panel title="Batches" icon={Layers}>
+        {batches.length === 0 ? (
+          <Empty>No batches here.</Empty>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className={table}>
+              <thead>
+                <tr className={headRow}>
+                  <th className={th}>Batch</th>
+                  <th className={th}>Sector / Sub Sector</th>
+                  <th className={th}>Applicants</th>
+                  <th className={th}>Sent by</th>
+                  <th className={th}>Status</th>
+                  <th className={th}>Created</th>
+                  <th className={th}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {batches.map((b) => (
+                  <tr key={b.id} className={tr}>
+                    <td className={`${td} font-semibold text-slate-900`}>{b.batch_no}</td>
+                    <td className={td}>{b.sector_command} <span className="text-slate-400">/</span> {b.sub_sector}</td>
+                    <td className={td}>{b.card_count}</td>
+                    <td className={td}>
+                      {(b.requested_by && names.get(b.requested_by)) || '—'}
+                      {b.requested_role && <span className="text-xs text-slate-400"> ({b.requested_role.toUpperCase()})</span>}
+                    </td>
+                    <td className={td}><Badge className={BATCH_STATUS_COLORS[b.status]}>{BATCH_STATUS_LABELS[b.status]}</Badge></td>
+                    <td className={`${td} whitespace-nowrap`}>{new Date(b.created_at).toLocaleDateString('en-NG')}</td>
+                    <td className={td}>
+                      <Link href={`/portal/staff/print/${b.id}`} className={rowButton}>
+                        {role === 'admin' && b.status === 'with_admin' ? 'Review' : role === 'ict' && b.status === 'with_ict' ? 'Open' : 'View'}
+                      </Link>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {batches.map((b) => (
-                    <tr key={b.id} className="border-b last:border-0 hover:bg-gray-50">
-                      <td className="py-2 pr-4 font-medium">{b.batch_no}</td>
-                      <td className="py-2 pr-4">{b.sector_command} <span className="text-gray-400">/</span> {b.sub_sector}</td>
-                      <td className="py-2 pr-4">{b.card_count}</td>
-                      <td className="py-2 pr-4 text-gray-600">
-                        {(b.requested_by && names.get(b.requested_by)) || '—'}
-                        {b.requested_role && <span className="text-xs text-gray-400"> ({b.requested_role.toUpperCase()})</span>}
-                      </td>
-                      <td className="py-2 pr-4"><Badge className={BATCH_STATUS_COLORS[b.status]}>{BATCH_STATUS_LABELS[b.status]}</Badge></td>
-                      <td className="py-2 pr-4 text-gray-500">{new Date(b.created_at).toLocaleDateString('en-NG')}</td>
-                      <td className="py-2">
-                        <LinkButton href={`/portal/staff/print/${b.id}`} size="sm" variant="outline" className="text-xs border-cjtf-green text-cjtf-green hover:bg-cjtf-green-light">
-                          {role === 'admin' && b.status === 'with_admin' ? 'Review' : role === 'ict' && b.status === 'with_ict' ? 'Open' : 'View'}
-                        </LinkButton>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Panel>
     </div>
   )
 }

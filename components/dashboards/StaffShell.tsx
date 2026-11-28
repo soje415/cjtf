@@ -6,15 +6,46 @@ import { usePathname } from 'next/navigation'
 import { LayoutDashboard, Printer, Layers, LogOut, UserRound } from 'lucide-react'
 import { toast } from 'sonner'
 
-const LINKS = [
-  { label: 'Dashboard', href: '/portal/int/dashboard', icon: LayoutDashboard, title: 'Intelligence Screening Dashboard' },
-  { label: 'Print Queue', href: '/portal/int/print-queue', icon: Printer, title: 'Print Queue' },
-  { label: 'Print Batches', href: '/portal/staff/print', icon: Layers, title: 'Print Batches' },
-]
+export type StaffRole = 'int' | 'admin' | 'ict'
 
-export default function IntShell({ name, children }: { name: string | null; children: React.ReactNode }) {
+const BATCHES = { label: 'Print Batches', href: '/portal/staff/print', icon: Layers, title: 'Print Batches' }
+
+const DESKS = {
+  int: {
+    department: 'INTELLIGENCE DEPARTMENT',
+    officer: 'Intelligence Officer',
+    fallbackTitle: 'Intelligence Screening',
+    links: [
+      { label: 'Dashboard', href: '/portal/int/dashboard', icon: LayoutDashboard, title: 'Intelligence Screening Dashboard' },
+      { label: 'Print Queue', href: '/portal/int/print-queue', icon: Printer, title: 'Print Queue' },
+      BATCHES,
+    ],
+  },
+  admin: {
+    department: 'ADMINISTRATION DEPARTMENT',
+    officer: 'Admin Officer',
+    fallbackTitle: 'Approval Review',
+    links: [
+      { label: 'Dashboard', href: '/portal/admin/dashboard', icon: LayoutDashboard, title: 'Admin Approval Dashboard' },
+      { label: 'Print Queue', href: '/portal/admin/print-queue', icon: Printer, title: 'Print Queue' },
+      BATCHES,
+    ],
+  },
+  ict: {
+    department: 'ICT DEPARTMENT',
+    officer: 'ICT Officer',
+    fallbackTitle: 'ICT Records',
+    links: [
+      { label: 'Dashboard', href: '/portal/ict/dashboard', icon: LayoutDashboard, title: 'ICT Processing Dashboard' },
+      BATCHES,
+    ],
+  },
+}
+
+export default function StaffShell({ role, name, children }: { role: StaffRole; name: string | null; children: React.ReactNode }) {
   const pathname = usePathname()
-  const title = LINKS.find((l) => pathname.startsWith(l.href))?.title ?? 'Intelligence Screening'
+  const desk = DESKS[role]
+  const title = desk.links.find((l) => pathname.startsWith(l.href))?.title ?? desk.fallbackTitle
 
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -28,11 +59,11 @@ export default function IntShell({ name, children }: { name: string | null; chil
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <header className="print:hidden bg-gradient-to-r from-[#061d4f] to-[#0b357f] text-white shadow-md">
         <div className="flex items-center gap-4 px-4 py-3">
-          <Link href="/portal/int/dashboard" className="flex items-center gap-3">
+          <Link href={desk.links[0].href} className="flex items-center gap-3">
             <Image src="/cjtf-logo.jpg" alt="CJTF Logo" width={40} height={40} className="rounded-full border-2 border-cjtf-yellow" />
             <div>
               <p className="text-lg md:text-xl font-extrabold leading-none tracking-wide">CJTF NIGERIA</p>
-              <p className="mt-1 text-[11px] md:text-xs font-bold leading-none text-cjtf-yellow">INTELLIGENCE DEPARTMENT</p>
+              <p className="mt-1 text-[11px] md:text-xs font-bold leading-none text-cjtf-yellow">{desk.department}</p>
             </div>
           </Link>
           <p className="hidden lg:block border-l border-white/30 pl-5 text-xl font-bold">{title}</p>
@@ -41,7 +72,7 @@ export default function IntShell({ name, children }: { name: string | null; chil
               <UserRound className="h-5 w-5" />
             </span>
             <div className="hidden sm:block">
-              <p className="text-sm font-semibold leading-tight">{name || 'Intelligence Officer'}</p>
+              <p className="text-sm font-semibold leading-tight">{name || desk.officer}</p>
               <p className="text-xs text-blue-200 leading-tight">FCT COMMAND</p>
             </div>
           </div>
@@ -51,7 +82,7 @@ export default function IntShell({ name, children }: { name: string | null; chil
       <div className="flex flex-1 flex-col md:flex-row">
         <aside className="print:hidden bg-[#0a2559] text-blue-100 md:w-44 md:shrink-0">
           <nav className="flex gap-1 overflow-x-auto p-2 md:flex-col md:p-3">
-            {LINKS.map((l) => {
+            {desk.links.map((l) => {
               const active = pathname.startsWith(l.href)
               return (
                 <Link
@@ -67,7 +98,11 @@ export default function IntShell({ name, children }: { name: string | null; chil
             </button>
           </nav>
         </aside>
-        <main className="min-w-0 flex-1 p-4">{children}</main>
+        {/* The shared Card component renders without inner padding on this
+            Tailwind version, so the staff screens restore it here. */}
+        <main className="min-w-0 flex-1 p-4 [&_[data-slot=card-content]]:px-5 [&_[data-slot=card-header]]:px-5 [&_[data-slot=card]]:py-4">
+          {children}
+        </main>
       </div>
     </div>
   )

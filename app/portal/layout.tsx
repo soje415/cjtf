@@ -1,7 +1,7 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import PortalNav from '@/components/dashboards/PortalNav'
-import IntShell from '@/components/dashboards/IntShell'
+import StaffShell from '@/components/dashboards/StaffShell'
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
@@ -43,9 +43,10 @@ export default async function PortalLayout({ children }: { children: React.React
     hasApplication = !!application
   }
 
-  // Intelligence has its own header-and-sidebar layout.
-  if (activeProfile.role === 'int') {
-    return <IntShell name={activeProfile.full_name}>{children}</IntShell>
+  // The three staff desks share a header-and-sidebar layout.
+  const { role } = activeProfile
+  if (role === 'int' || role === 'admin' || role === 'ict') {
+    return <StaffShell role={role} name={activeProfile.full_name}>{children}</StaffShell>
   }
 
   return (
